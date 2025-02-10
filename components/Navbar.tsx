@@ -4,7 +4,7 @@
 import Hamburger from "@/components/Hamburger";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import path from "path";
+import Link from "next/link";
 
 
 export default function NavBar() {
@@ -38,21 +38,21 @@ export default function NavBar() {
         <nav className="bg-transparent text-white fixed top-0 left-0 w-full z-10">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="text-xl font-bold">
-                <a href="/" className="flex items-center">
+                <Link href="/" className="flex items-center">
                   {pathname == '/' ? (
                     <img src="/MichiganLogoWhite.png" alt="MIG 2025 Quant Conference" className="h-16 w-auto" />
                   ) : (
                     <img src="/finalLogoRedone.png" alt="MIG 2025 Quant Conference" className="h-16 w-auto" />
                   )}
-                </a>
+                </Link>
             </div>
 
             {/* Nav Links */}
             <div className="space-x-4">
-                <a className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</a> 
-                <a className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='/announcements'>Announcements</a>
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link> 
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='/announcements'>Announcements</Link>
                 {/* <a className="hover:bg-gray-700 px-3 py-2 rounded-md" href='/sponsors'>Sponsors</a> */}
-                <a className={`bg-yellow-700 hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='https://forms.gle/WTdQdMp8XVGQuywM9'>Signup</a>
+                <Link className={`bg-yellow-700 hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='https://forms.gle/WTdQdMp8XVGQuywM9'>Signup</Link>
             </div>
           </div>
         </nav>

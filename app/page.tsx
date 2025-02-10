@@ -1,4 +1,3 @@
-import Image from "next/image";
 import 'animate.css'; // add this import
 
 export default function Home() {
