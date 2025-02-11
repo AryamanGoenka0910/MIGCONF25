@@ -1,10 +1,12 @@
+import HomeFAQ from '@/components/HomeFAQ';
 import 'animate.css'; // add this import
 
 export default function Home() {
   return (
+    <>
     <div
         className="
-          bg-[url('/hero.jpg')]  /* Change to the actual image name */
+          bg-[url('/hero.jpg')] 
           bg-cover 
           bg-center
           h-screen
@@ -14,16 +16,12 @@ export default function Home() {
           justify-center
         "
       >
-        {/* Overlay (optional): remove if you want the image fully visible */}
-        
-        <div className="absolute inset-0 bg-black bg-opacity-65"></div>
+        <div className="absolute inset-0 bg-black bg-opacity-85"></div>
        
-
-        {/* Content container, with relative positioning if you use an overlay */}
         <div className="text-center px-4">
           <h1
             className="
-            text-yellow-200 
+            text-white
               drop-shadow-lg
               text-5xl 
               font-bold 
@@ -37,7 +35,7 @@ export default function Home() {
 
           <p
             className="
-              text-yellow-200 
+              text-white
               drop-shadow-lg
               text-lg
               max-w-2xl
@@ -51,7 +49,6 @@ export default function Home() {
             Join the brightest minds in quantitative finance to connect, learn, and grow your network with industry experts.
           </p>
 
-          {/* Button leading to the signup page */}
           <a
             href="https://forms.gle/WTdQdMp8XVGQuywM9"
             className="
@@ -59,11 +56,11 @@ export default function Home() {
               bg-white
               text-black
               drop-shadow-lg
-              px-6 
-              py-3 
+              px-3 
+              py-2 
               rounded-md 
               text-lg
-              hover:bg-yellow-200 
+              hover:bg-yellow-700 
               animate__animated
               animate__fadeInDown
               animate__delay-2s
@@ -73,5 +70,19 @@ export default function Home() {
           </a>
         </div>
       </div>
+      <div 
+        className="
+          flex
+          justify-center
+          items-center
+          bg-gray-100
+          w-screen
+          h-auto
+          py-8
+        "
+      >
+        <HomeFAQ />
+      </div>
+      </>
   );
 }
