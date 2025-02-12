@@ -11,7 +11,7 @@ export default function AnnouncementPage() {
       <div className="relative w-full flex flex-col items-center justify-center h-max p-32">
         <div className="absolute inset-0 w-full h-full bg-[url('/IMG_6198.jpg')] bg-cover bg-center blur-[2px] "></div>
         <div className="absolute inset-0 bg-black bg-opacity-50 h-full"></div>
-        <h1 className="relative z-10 text-5xl font-montserrat font-bold text-center text-white">
+        <h1 className="relative z-10 text-4xl font-montserrat font-bold text-center text-white">
           Announcements
         </h1>
       </div>
