@@ -9,14 +9,14 @@ export default function Home() {
           bg-[url('/hero.jpg')] 
           bg-cover 
           bg-center
-          h-screen
+          h-[calc(100vh-20vh)]
           flex
           flex-col
           items-center
           justify-center
         "
       >
-        <div className="absolute inset-0 bg-black bg-opacity-85"></div>
+        <div className="absolute inset-0 bg-black bg-opacity-75 h-[calc(100vh-20vh)]"></div>
        
         <div className="text-center px-4">
           <h1
@@ -24,6 +24,7 @@ export default function Home() {
             text-white
               drop-shadow-lg
               text-5xl 
+              font-montserrat
               font-bold 
               mb-6 
               animate__animated 
@@ -37,7 +38,8 @@ export default function Home() {
             className="
               text-white
               drop-shadow-lg
-              text-lg
+              text-2xl
+              font-medium
               max-w-2xl
               mx-auto
               mb-8 
@@ -46,7 +48,7 @@ export default function Home() {
               animate__delay-1s
             "
           >
-            Join the brightest minds in quantitative finance to connect, learn, and grow your network with industry experts.
+            Join us to connect, learn, and grow your network with industry experts.
           </p>
 
           <a

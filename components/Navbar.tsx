@@ -36,10 +36,10 @@ export default function NavBar() {
         <Hamburger />
       ) : (
         <nav className="bg-transparent text-white fixed top-0 left-0 w-full z-10">
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-2 py-3 flex items-center justify-between">
             <div className="text-xl font-bold">
                 <Link href="/" className="flex items-center">
-                  {pathname == '/' ? (
+                  {pathname != '/schedule' ? (
                     <img src="/MichiganLogoWhite.png" alt="MIG 2025 Quant Conference" className="h-16 w-auto" />
                   ) : (
                     <img src="/finalLogoRedone.png" alt="MIG 2025 Quant Conference" className="h-16 w-auto" />
@@ -48,11 +48,11 @@ export default function NavBar() {
             </div>
 
             {/* Nav Links */}
-            <div className="space-x-4">
-                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link> 
-                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='/announcements'>Announcements</Link>
+            <div className="space-x-4 font-mono font-semibold">
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link> 
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/announcements'>Announcements</Link>
                 {/* <a className="hover:bg-gray-700 px-3 py-2 rounded-md" href='/sponsors'>Sponsors</a> */}
-                <Link className={`bg-yellow-700 hover:bg-gray-700 px-3 py-2 rounded-md ${pathname != '/' ? 'text-gray-900' : ''}`} href='https://forms.gle/WTdQdMp8XVGQuywM9'>Signup</Link>
+                <Link className={`bg-yellow-700 hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='https://forms.gle/WTdQdMp8XVGQuywM9'>Signup</Link>
             </div>
           </div>
         </nav>
