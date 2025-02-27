@@ -14,6 +14,23 @@ const HomeFAQ = () => {
 
         {/* Rules Section */}
         <div className="bg-gray-100 p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold text-gray-900">What is the Conference?</h2>
+          <p className="text-gray-700 mt-2">
+          The MIG Quant Conference is an annual event hosted by the Michigan Investment Group 
+          at the University of Michigan, designed for students interested in <strong> quantitative finance, trading, and technology. </strong> 
+          </p>
+          <p className="text-gray-700 mt-2">
+          The conference features quant games, networking with top sponsors like <strong> IMC and Jane Street </strong>, 
+          and insightful discussions with industry leaders. 
+          Attendees will have the opportunity to <strong> compete for prizes, </strong> engage in hands-on experiences, and learn from experts in the field. 
+          </p>
+          <p className="text-gray-700 mt-2">
+          Open to all undergraduates in Math, CS, BBA, Statistics, Economics, and related fields, this event is the perfect way to explore career opportunities in quant finance. Apply by March 10th!
+          </p>
+        </div>
+
+        {/* Rules Section */}
+        <div className="bg-gray-100 p-6 rounded-xl shadow-lg">
           <h2 className="text-2xl font-semibold text-gray-900">When + Where?</h2>
           <p className="text-gray-700 mt-2">
             The conference will be held on March 16th, 2025 at the University of Michigan, Ross School of Business 
