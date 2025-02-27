@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: "migconf-25.vercel.app",
     images: [
       {
-        url: "https://migconf-25.vercel.app/logo.jpeg",
+        url: "https://migconf-25.vercel.app/favicon.ico",
         width: 1080,
         height: 1080,
       },
