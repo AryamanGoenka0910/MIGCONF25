@@ -3,7 +3,7 @@
 import React from 'react';
 import { useTimer } from 'react-timer-hook';
 
-function MyTimer({ expiryTimestamp } : any) {
+function MyTimer({ expiryTimestamp } : { expiryTimestamp: Date }) {
   const {
     seconds,
     minutes,
