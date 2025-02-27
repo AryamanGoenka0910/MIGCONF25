@@ -4,25 +4,43 @@ import React from 'react';
 const announcements = [
   {
     id: '1',
-    title: 'Welcome to the Conference!',
-    date: 'Feb 10, 2025',
+    title: 'Welcome to the MIG Conference!',
+    date: 'Feb 20th, 2025',
     content:
-      'We are excited to welcome you to our annual quant conference. Get ready for a day full of insightful talks and networking opportunities.',
+    <span>
+    Our <a 
+      className="underline" 
+      href="https://forms.gle/WTdQdMp8XVGQuywM9" 
+      target="_blank" 
+      rel="noopener noreferrer"
+    >
+      <strong>application</strong>
+    </a> is now live for the 2025 conference.  
+  
+    Please contact <a 
+      className="underline" 
+      href="mailto:mig.board@umich.edu" 
+      target="_blank" 
+      rel="noopener noreferrer"
+    >
+      <strong>mig.board@umich.edu</strong>
+    </a> if you have any questions.
+  </span>
   },
-  {
-    id: '2',
-    title: 'Schedule Released',
-    date: 'Feb 09, 2025',
-    content:
-      'The full schedule is now available. Check out all the sessions and plan your day accordingly!',
-  },
-  {
-    id: '3',
-    title: 'Networking Evening',
-    date: 'Feb 08, 2025',
-    content:
-      'Join us after the sessions for an informal networking event. A great opportunity to connect with industry experts and peers.',
-  },
+  // {
+  //   id: '2',
+  //   title: 'Schedule Released',
+  //   date: 'Feb 09, 2025',
+  //   content:
+  //     'The full schedule is now available. Check out all the sessions and plan your day accordingly!',
+  // },
+  // {
+  //   id: '3',
+  //   title: 'Networking Evening',
+  //   date: 'Feb 08, 2025',
+  //   content:
+  //     'Join us after the sessions for an informal networking event. A great opportunity to connect with industry experts and peers.',
+  // },
 ];
 
 export default function Announcement() {
@@ -34,7 +52,7 @@ export default function Announcement() {
             key={announcement.id}
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
           >
-            <h2 className="text-2xl font-semibold mb-2">{announcement.title}</h2>
+            <h2 className="text-gray-700 text-2xl font-semibold mb-2">{announcement.title}</h2>
             <p className="text-gray-500 text-sm mb-4">{announcement.date}</p>
             <p className="text-gray-700">{announcement.content}</p>
           </div>

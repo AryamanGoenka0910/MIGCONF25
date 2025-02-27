@@ -2,10 +2,14 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 
 const HamburgerDrawer = () => {
   const [isOpen, setIsOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  const pathname = usePathname();
+  const router = useRouter();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -29,6 +33,18 @@ const HamburgerDrawer = () => {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
+
+  const scrollToSection = (id: string) => {
+  
+    if (pathname !== "/") {
+      router.push(`/#${id}`); // Navigate to the homepage and append hash
+    } else {
+      const section = document.getElementById(id);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
   return (
     <div className="drawer drawer-end" ref={drawerRef}>
@@ -80,11 +96,15 @@ const HamburgerDrawer = () => {
           <li>
             <Link href="/">Home</Link>
           </li>
-          <li>
+          {/* <li>
             <Link href="/schedule">Schedule</Link>
-          </li>
+          </li> */}
           <li>
             <Link href="/announcements">Announcements</Link>
+          </li>
+
+          <li>
+            <button onClick={() => scrollToSection("faq")}>FAQ</button>
           </li>
           <li>
             <Link href="https://forms.gle/WTdQdMp8XVGQuywM9">Sign Up</Link>

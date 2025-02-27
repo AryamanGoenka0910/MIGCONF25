@@ -1,4 +1,5 @@
 import HomeFAQ from '@/components/HomeFAQ';
+import Timer from '@/components/Timer';
 import 'animate.css'; // add this import
 
 export default function Home() {
@@ -33,7 +34,6 @@ export default function Home() {
           >
             Welcome to the 2025 MIG Quant Conference
           </h1>
-
           <p
             className="
               text-white
@@ -48,7 +48,7 @@ export default function Home() {
               animate__delay-1s
             "
           >
-            Join us to connect, learn, and grow your network with industry experts.
+            Join us March 16th at the University of Michigan to connect, learn, and grow with industry experts.
           </p>
 
           <a
@@ -80,10 +80,12 @@ export default function Home() {
           bg-gray-100
           w-screen
           h-auto
-          py-8
         "
       >
+       <div className='flex flex-col justify-center items-center'>
+        <Timer />
         <HomeFAQ />
+       </div>
       </div>
       </>
   );
