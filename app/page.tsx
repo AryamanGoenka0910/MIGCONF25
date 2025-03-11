@@ -1,5 +1,4 @@
 import HomeFAQ from '@/components/HomeFAQ';
-import Timer from '@/components/Timer';
 import 'animate.css'; // add this import
 
 export default function Home() {
