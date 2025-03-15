@@ -14,7 +14,7 @@ const timelineData: TimelineData[] = [
   },
   {
     time: "12:00 PM",
-    title: "MIG Welcom",
+    title: "MIG Welcome",
     description: "A warm welcome from the MIG Team and a brief overview of the conference.",
   },
   {
