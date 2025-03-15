@@ -29,7 +29,7 @@ const timelineData: TimelineData[] = [
   },
   {
     time: "02:10 PM",
-    title: "Panel Discussion",
+    title: "Lunch",
     description: "Enjoy lunch and network with peers and our partner firms",
   },
   {
