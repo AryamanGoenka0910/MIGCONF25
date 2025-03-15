@@ -63,7 +63,7 @@ export default function NavBar() {
 
             {/* Nav Links */}
             <div className="space-x-4 font-mono font-semibold">
-                {/* <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link>  */}
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link> 
                 <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/announcements'>Announcements</Link>
                 <button className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} onClick={() => scrollToSection("faq")}>FAQ</button> 
                 {/* <a className="hover:bg-gray-700 px-3 py-2 rounded-md" href='/sponsors'>Sponsors</a> */}

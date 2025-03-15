@@ -8,39 +8,49 @@ interface TimelineData {
 
 const timelineData: TimelineData[] = [
   {
-    time: "09:00 AM",
+    time: "11:30 AM",
     title: "Registration & Breakfast",
     description: "Check in, grab a coffee, and network with other participants.",
   },
   {
-    time: "10:00 AM",
-    title: "Keynote Speech",
-    description: "Keynote presentation by our leading quant expert.",
-  },
-  {
-    time: "11:00 AM",
-    title: "Session 1: Market Analytics",
-    description: "Deep dive into the latest quantitative market analysis techniques.",
-  },
-  {
     time: "12:00 PM",
-    title: "Lunch Break",
-    description: "Enjoy a buffet lunch and network with peers.",
+    title: "MIG Welcom",
+    description: "A warm welcome from the MIG Team and a brief overview of the conference.",
   },
   {
-    time: "01:30 PM",
+    time: "12:20 PM",
+    title: "Trading Game 1",
+    description: "Our First Quant Game for the Day",
+  },
+  {
+    time: "01:20 PM",
+    title: "IMC Panel",
+    description: "IMC Panel Discussion with engineers and trades from the firm",
+  },
+  {
+    time: "02:10 PM",
     title: "Panel Discussion",
-    description: "Experts discuss emerging trends in quantitative finance.",
+    description: "Enjoy lunch and network with peers and our partner firms",
   },
   {
-    time: "03:00 PM",
-    title: "Workshop",
-    description: "Hands-on session with industry-standard tools and techniques.",
+    time: "02:45 PM",
+    title: "Old Mission Panel",
+    description: "Old Mission Panel Discussion with engineers and trades from the firm",
   },
   {
-    time: "04:30 PM",
-    title: "Closing Remarks",
-    description: "Summary of the day and announcements for future events.",
+    time: "03:35 PM",
+    title: "MIG Workshop",
+    description: "Hands-on workshop led by MIG members",
+  },
+  {
+    time: "04:00 PM",
+    title: "Trading Game 2",
+    description: "Our last trading game of the day",
+  },
+  {
+    time: "05:00 PM",
+    title: "Closing Remarks and Awards",
+    description: "A final thank you to all attendees and prizes for our winners",
   },
 ];
 

@@ -96,9 +96,9 @@ const HamburgerDrawer = () => {
           <li>
             <Link href="/">Home</Link>
           </li>
-          {/* <li>
+          <li>
             <Link href="/schedule">Schedule</Link>
-          </li> */}
+          </li>
           <li>
             <Link href="/announcements">Announcements</Link>
           </li>

@@ -51,7 +51,7 @@ export default function Home() {
           </p>
 
           <a
-            href="https://forms.gle/WTdQdMp8XVGQuywM9"
+            href="/schedule"
             className="
               inline-block 
               bg-white
@@ -67,7 +67,7 @@ export default function Home() {
               animate__delay-2s
             "
           >
-            Sign Up Now
+            View Schedule
           </a>
         </div>
       </div>
