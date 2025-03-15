@@ -27,20 +27,13 @@ const announcements = [
     </a> if you have any questions.
   </span>
   },
-  // {
-  //   id: '2',
-  //   title: 'Schedule Released',
-  //   date: 'Feb 09, 2025',
-  //   content:
-  //     'The full schedule is now available. Check out all the sessions and plan your day accordingly!',
-  // },
-  // {
-  //   id: '3',
-  //   title: 'Networking Evening',
-  //   date: 'Feb 08, 2025',
-  //   content:
-  //     'Join us after the sessions for an informal networking event. A great opportunity to connect with industry experts and peers.',
-  // },
+  {
+    id: '2',
+    title: 'Schedule Released',
+    date: 'Marcg 15, 2025',
+    content:
+      'The full schedule is now available and the event will be held in Tauber Colloqium @ The Ross School of Business. We look forward to seeing you in person!',
+  },
 ];
 
 export default function Announcement() {
