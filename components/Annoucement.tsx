@@ -3,6 +3,13 @@ import React from 'react';
 // Sample announcements data; replace with your dynamic data when needed.
 const announcements = [
   {
+    id: '2',
+    title: 'Schedule Released',
+    date: 'March 15, 2025',
+    content:
+      'The full schedule is now available and the event will be held in Tauber Colloqium @ The Ross School of Business. We look forward to seeing you in person!',
+  },
+  {
     id: '1',
     title: 'Welcome to the MIG Conference!',
     date: 'Feb 20th, 2025',
@@ -26,13 +33,6 @@ const announcements = [
       <strong>mig.board@umich.edu</strong>
     </a> if you have any questions.
   </span>
-  },
-  {
-    id: '2',
-    title: 'Schedule Released',
-    date: 'Marcg 15, 2025',
-    content:
-      'The full schedule is now available and the event will be held in Tauber Colloqium @ The Ross School of Business. We look forward to seeing you in person!',
   },
 ];
 
