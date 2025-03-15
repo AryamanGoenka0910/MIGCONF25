@@ -39,12 +39,12 @@ const timelineData: TimelineData[] = [
   },
   {
     time: "03:35 PM",
-    title: "MIG Workshop",
-    description: "Hands-on workshop led by MIG members",
+    title: "Trading Game 2",
+    description: "Our Second Quant Game for the Day",
   },
   {
     time: "04:00 PM",
-    title: "Trading Game 2",
+    title: "Trading Game 3",
     description: "Our last trading game of the day",
   },
   {
