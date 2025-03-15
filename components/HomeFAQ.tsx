@@ -43,7 +43,7 @@ const HomeFAQ = () => {
         <div className="bg-gray-100 p-6 rounded-xl shadow-lg">
           <h2 className="text-2xl font-semibold text-gray-900">What are Quant Games</h2>
           <p className="text-gray-700 mt-2">
-            All attendees will have the opportunity to particpate in Quant Foucused Games
+            All attendees will have the opportunity to participate in Quant Foucused Games
             that are meant to educate and mimic the world of Quant ie. Market Making Games.
             Winners of these games are eligble to win prizes in addition to their company swag.
           </p>
