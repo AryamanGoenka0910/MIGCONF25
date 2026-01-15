@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { useSession } from "@/hooks/useSession";
 
 type Requirement = {
   label: string;
@@ -35,6 +36,7 @@ function GooglePhotosIcon({ className = "h-5 w-5" }: { className?: string }) {
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { user, loading } = useSession();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -66,6 +68,12 @@ export default function SignUpPage() {
     password === confirm &&
     agreed &&
     !submitting;
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, loading, router]);
 
   const handleGoogle = async () => {
     setMessage(null);
