@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/Navbar";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: {
@@ -12,8 +11,7 @@ export const metadata: Metadata = {
   description: "Official Website for the 2025 MIG Quant Conference",
   openGraph: {
     title: "migconf-25.vercel.app",
-    description:
-      "Official Website for the 2025 MIG Quant Conference",
+    description: "Official Website for the 2025 MIG Quant Conference",
     url: "https://migconf-25.vercel.app",
     siteName: "migconf-25.vercel.app",
     images: [
@@ -44,21 +42,6 @@ export const metadata: Metadata = {
   },
 };
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const montserrat = Montserrat({ 
-  subsets: ['latin'], 
-  weight: ['700'] 
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -66,16 +49,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${montserrat.className} antialiased`}
-      >
-         <NavBar />
+      <body className={`antialiased`}>
+        {/* <NavBar /> */}
         {children}
         <Analytics />
       </body>
     </html>
   );
 }
-
-
-

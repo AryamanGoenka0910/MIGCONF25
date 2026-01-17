@@ -67,6 +67,16 @@ const HomeFAQ = () => {
             No Prior Experience with anything quant related is Required, just a genuine curiosity to learn!
           </p>
         </div>
+
+        {/* Meals Section */}
+        <div className="bg-gray-100 p-6 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold text-gray-900">Are meals provided?</h2>
+          <p className="text-gray-700 mt-2">
+            Yes, breakfast and lunch are included for all attendees. Breakfast service begins when
+            doors open, and lunch is served with a range of hot and cold options to keep you fueled
+            through the afternoon sessions.
+          </p>
+        </div>
       </div>
     </section>
   )

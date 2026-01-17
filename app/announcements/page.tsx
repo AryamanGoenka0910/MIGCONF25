@@ -14,52 +14,6 @@ interface Announcement {
 }
 
 const announcements: Announcement[] = [
-  // {
-  //   id: 1,
-  //   title: "Keynote Starting Soon",
-  //   time: "9:45 AM",
-  //   location: "Main Auditorium",
-  //   type: "reminder",
-  //   message: "Dr. Emily Chen's keynote on Machine Learning in Algorithmic Trading begins in 15 minutes.",
-  // },
-  // {
-  //   id: 2,
-  //   title: "Lunch Service Now Available",
-  //   time: "12:00 PM",
-  //   location: "Grand Hall",
-  //   type: "update",
-  //   message: "Lunch is now being served. Please proceed to the Grand Hall. Remember to pick up your meal voucher.",
-  // },
-  // {
-  //   id: 3,
-  //   title: "Room Change",
-  //   time: "2:15 PM",
-  //   location: "Room 305 → Room 401",
-  //   type: "alert",
-  //   message: "The workshop on 'Portfolio Optimization with Python' has been moved to Room 401 due to high attendance.",
-  // },
-  // {
-  //   id: 4,
-  //   title: "Networking Reception",
-  //   time: "5:30 PM",
-  //   location: "Rooftop Terrace",
-  //   type: "info",
-  //   message: "Join us for an evening networking reception with complimentary refreshments on the Rooftop Terrace.",
-  // },
-  // {
-  //   id: 5,
-  //   title: "WiFi Information",
-  //   time: "All Day",
-  //   type: "info",
-  //   message: "Conference WiFi: Network 'QuantConf2026' | Password: 'trading2026'",
-  // },
-  // {
-  //   id: 6,
-  //   title: "Emergency Contact",
-  //   time: "All Day",
-  //   type: "alert",
-  //   message: "For any emergencies or assistance, please contact conference staff at ext. 1234 or visit the help desk.",
-  // },
 ]
 
 function getAnnouncementColor(type: string) {

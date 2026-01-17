@@ -9,15 +9,9 @@ export default {
   ],
   theme: {
   	extend: {
-  		fontFamily: {
-  			montserrat: [
-  				'Montserrat',
-  				'sans-serif'
-  			]
-  		},
   		colors: {
-  			background: 'var(--background)',
-  			foreground: 'var(--foreground)',
+			background: "hsl(var(--background) / <alpha-value>)",
+			foreground: "hsl(var(--foreground) / <alpha-value>)",
   			card: {
   				DEFAULT: 'var(--card)',
   				foreground: 'var(--card-foreground)'
@@ -27,28 +21,29 @@ export default {
   				foreground: 'var(--popover-foreground)'
   			},
   			primary: {
-  				DEFAULT: 'var(--primary)',
-  				foreground: 'var(--primary-foreground)'
-  			},
-  			secondary: {
-  				DEFAULT: 'var(--secondary)',
-  				foreground: 'var(--secondary-foreground)'
-  			},
-  			muted: {
-  				DEFAULT: 'var(--muted)',
-  				foreground: 'var(--muted-foreground)'
-  			},
-  			accent: {
-  				DEFAULT: 'var(--accent)',
-  				foreground: 'var(--accent-foreground)'
-  			},
+				DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+				foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+			},
+			secondary: {
+				DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+				foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
+			},
+			muted: {
+				DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+				foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
+			},
+	  
+			accent: {
+				DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+				foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
+			  },
   			destructive: {
   				DEFAULT: 'var(--destructive)',
   				foreground: 'var(--destructive-foreground)'
   			},
-  			border: 'var(--border)',
-  			input: 'var(--input)',
-  			ring: 'var(--ring)',
+  			border: "hsl(var(--border) / <alpha-value>)",
+        input: "hsl(var(--input) / <alpha-value>)",
+        ring: "hsl(var(--ring) / <alpha-value>)",
   			chart: {
   				'1': 'var(--chart-1)',
   				'2': 'var(--chart-2)',

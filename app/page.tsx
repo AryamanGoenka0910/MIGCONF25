@@ -1,10 +1,16 @@
+"use client"
+
 import HomeFAQ from '@/components/HomeFAQ';
-import 'animate.css'; // add this import
+import HeroCarousel from "@/components/hero-carousel"
+import { Button } from "@/components/ui/button"
+import { Calendar, Users, Award } from "lucide-react"
 
 export default function Home() {
   return (
-    <>
-    <div
+    <div className="min-h-screen">
+
+    <HeroCarousel />
+    {/* <div
         className="
           bg-[url('/hero.jpg')] 
           bg-cover 
@@ -24,7 +30,6 @@ export default function Home() {
             text-white
               drop-shadow-lg
               text-5xl 
-              font-montserrat
               font-bold 
               mb-6 
               animate__animated 
@@ -80,11 +85,11 @@ export default function Home() {
           w-screen
           h-auto
         "
-      >
+      > */}
        <div className='flex flex-col justify-center items-center'>
         <HomeFAQ />
        </div>
       </div>
-      </>
+      // </div>
   );
 }
