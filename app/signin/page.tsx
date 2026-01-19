@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useSession } from "@/hooks/useSession";
 
+import EyeOnIcon from "@/components/auth-components/see-password";
+import EyeOffIcon from "@/components/auth-components/hide-password";
+
+const inputStyles = "mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-t-primary outline-hidden focus:border-accent transition-all duration-200 hover:border-white"
+const visibilityButtonStyles = "mt-2 absolute inset-y-0 right-3 flex items-center justify-center rounded-full bg-white/10 p-2 text-t-primary transition hover:bg-white/20"
+
+
 function GooglePhotosIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -33,6 +40,26 @@ export default function SignInPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = email.trim().length > 0 && password.length > 0 && !submitting;
+
+  // Handle OAuth redirects explicitly (we disabled detectSessionInUrl in the client).
+  useEffect(() => {
+    const run = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const type = params.get("type");
+      if (!code || type === "recovery") return;
+
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+
+      // Clean up the URL so the code can't be reused on refresh.
+      window.history.replaceState({}, "", window.location.pathname);
+    };
+    run();
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -75,9 +102,9 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-[#032456]">
       <div className="flex min-h-screen items-center justify-center px-4 py-20">
-        <div className="w-full max-w-lg rounded-[40px] bg-slate-800/80 p-8 shadow-2xl">
-          <h1 className="text-4xl font-semibold text-white">Welcome Back</h1>
-          <p className="mt-3 text-xl font-semibold uppercase tracking-[0.2em] text-white/70">
+        <div className="w-full max-w-lg rounded-[40px] bg-muted/80 p-8 shadow-2xl">
+          <h1 className="text-4xl font-semibold text-t-primary">Welcome Back</h1>
+          <p className="mt-3 text-xl font-semibold uppercase tracking-[0.2em] text-t-primary/70">
             Log In to the MIG Quant Conference
           </p>
 
@@ -86,7 +113,7 @@ export default function SignInPage() {
             <button
               type="button"
               onClick={handleGoogle}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[color:var(--accent)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white transition hover:bg-[color:var(--accent)]/90"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-t-primary transition hover:bg-(--accent)/70"
             >
               <GooglePhotosIcon />
               Continue with Google
@@ -104,7 +131,7 @@ export default function SignInPage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               {/* Email */}
               <div>
-                <label className="text-[0.65rem] uppercase tracking-[0.3em] text-white/70">
+                <label className="text-[0.65rem] uppercase tracking-[0.3em] text-t-primary/70">
                   Email Address
                 </label>
                 <input
@@ -112,60 +139,45 @@ export default function SignInPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@university.edu"
-                  className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]"
+                  className={inputStyles}
                   required
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label className="text-[0.65rem] uppercase tracking-[0.3em] text-white/70">
+              <div className="flex items-center justify-between">
+                <label className="text-[0.65rem] uppercase tracking-[0.3em] text-t-primary/70">
                   Password
                 </label>
+
+                <button
+                  type="button"
+                  onClick={() => router.push("/forgot-password")}
+                  className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-t-primary/60 hover:text-t-primary underline underline-offset-4"
+                >
+                  Forgot password?
+                </button>
+              </div>
                 <div className="relative mt-2">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full rounded-2xl border border-white/20 bg-white/5 px-4 py-3 pr-12 text-sm text-white outline-none focus:border-[color:var(--accent)]"
+                    className={inputStyles + " pr-12"}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+                    className={visibilityButtonStyles}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 text-white"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17.94 17.94A10 10 0 0 1 6.06 6.06" />
-                        <path d="M1 1l22 22" />
-                        <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12" />
-                      </svg>
+                      <EyeOnIcon />
                     ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 text-white"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
+                      <EyeOffIcon />
                     )}
                   </button>
                 </div>
@@ -174,25 +186,49 @@ export default function SignInPage() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full rounded-2xl bg-[color:var(--accent)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-[color:var(--accent)]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-t-primary transition hover:bg-(--accent)/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting ? "Working..." : "Sign in"}
               </button>
             </form>
 
-            {message && <p className="mt-4 text-center text-sm text-white/80">{message}</p>}
+            {message && 
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                onClick={() => setMessage(null)}
+                role="dialog"
+                aria-modal="true"
+              >
+                <div
+                  className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <p className="text-sm text-white/90">{message}</p>
+                    <button
+                      type="button"
+                      className="rounded-md px-2 py-1 text-white/60 hover:text-white"
+                      onClick={() => setMessage(null)}
+                      aria-label="Close message"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              </div>
+              }
 
             <div className="mt-6 flex flex-col items-center gap-3">
               <button
                 type="button"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-t-primary/60"
                 onClick={() => router.push("/signup")}
               >
-                Need an account? <span className="underline underline-offset-4 hover:text-white/80">Sign up</span>
+                Need an account? <span className="underline underline-offset-4 hover:text-t-primary">Sign up</span>
               </button>
               <button
                 type="button"
-                className="text-xs font-semibold uppercase tracking-[0.2em] text-white hover:text-white/80"
+                className="text-xs font-semibold uppercase tracking-[0.2em] text-t-primary hover:text-t-primary/50"
                 onClick={() => router.push("/")}
               >
                 Back to home
