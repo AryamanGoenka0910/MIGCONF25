@@ -113,7 +113,7 @@ export default function SignInPage() {
             <button
               type="button"
               onClick={handleGoogle}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-t-primary transition hover:bg-(--accent)/70"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-t-primary transition hover:bg-accent/70"
             >
               <GooglePhotosIcon />
               Continue with Google
@@ -186,7 +186,7 @@ export default function SignInPage() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-t-primary transition hover:bg-(--accent)/70 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-t-primary transition hover:bg-accent/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting ? "Working..." : "Sign in"}
               </button>

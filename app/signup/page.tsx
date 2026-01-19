@@ -172,7 +172,7 @@ export default function SignUpPage() {
             <button
               type="button"
               onClick={handleGoogle}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white transition hover:bg-(--accent)/70"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white transition hover:bg-accent/70"
             >
               <GooglePhotosIcon />
               Continue with Google
@@ -271,7 +271,7 @@ export default function SignUpPage() {
                   </div>
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-(--accent) transition-all"
+                      className="h-full rounded-full bg-accent transition-all"
                       style={{
                         width: `${(requirementState.met / requirements.length) * 100}%`,
                       }}
@@ -287,7 +287,7 @@ export default function SignUpPage() {
                             className={[
                               "flex h-6 w-6 items-center justify-center rounded-full border text-xs",
                               ok
-                                ? "border-(--accent) bg-(--accent)/20 text-white"
+                                ? "border-accent bg-accent/20 text-white"
                                 : "border-white/15 bg-white/5 text-white/40",
                             ].join(" ")}
                             aria-hidden="true"
@@ -350,7 +350,7 @@ export default function SignUpPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/terms")}
-                    className="text-(--accent) underline underline-offset-4"
+                    className="text-accent underline underline-offset-4"
                   >
                     terms and conditions
                   </button>{" "}
@@ -358,7 +358,7 @@ export default function SignUpPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/privacy")}
-                    className="text-(--accent) underline underline-offset-4"
+                    className="text-accent underline underline-offset-4"
                   >
                     privacy policy
                   </button>
@@ -369,7 +369,7 @@ export default function SignUpPage() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-(--accent)/70 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-accent/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting ? "Working..." : "Create account"}
               </button>

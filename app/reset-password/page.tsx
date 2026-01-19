@@ -248,7 +248,7 @@ export default function ResetPasswordPage() {
                   </div>
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-(--accent) transition-all"
+                      className="h-full rounded-full bg-accent transition-all"
                       style={{
                         width: `${(requirementState.met / requirements.length) * 100}%`,
                       }}
@@ -264,7 +264,7 @@ export default function ResetPasswordPage() {
                             className={[
                               "flex h-6 w-6 items-center justify-center rounded-full border text-xs",
                               ok
-                                ? "border-(--accent) bg-(--accent)/20 text-white"
+                                ? "border-accent bg-accent/20 text-white"
                                 : "border-white/15 bg-white/5 text-white/40",
                             ].join(" ")}
                             aria-hidden="true"
@@ -315,7 +315,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full rounded-2xl bg-(--accent) px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-(--accent)/70 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-accent/70 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {checkingLink ? "Validating link..." : submitting ? "Working..." : "Reset password"}
               </button>
