@@ -1,9 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* @custom-variant dark (&:is(.dark *)); */
 
 :root {
+  --t-primary: oklch(1.00 0 0);
   --background: oklch(0.18 0.04 250);
   --foreground: oklch(0.98 0 0);
   --card: oklch(0.22 0.04 250);
@@ -12,9 +13,9 @@
   --popover-foreground: oklch(0.98 0 0);
   --primary: oklch(0.75 0.18 95);
   --primary-foreground: oklch(0.15 0.04 250);
-  --secondary: oklch(0.45 0.15 255);
+  --secondary: oklch(0.273 0.098 258.9);
   --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.25 0.04 250);
+  --muted: oklch(27.9% 0.041 260.031);
   --muted-foreground: oklch(0.7 0.02 0);
   --accent: oklch(0.8 0.2 95);
   --accent-foreground: oklch(0.15 0.04 250);
@@ -39,7 +40,7 @@
   --sidebar-ring: oklch(0.75 0.18 95);
 }
 
-.dark {
+/* .dark {
   --background: oklch(0.12 0.04 250);
   --foreground: oklch(0.98 0 0);
   --card: oklch(0.16 0.04 250);
@@ -72,11 +73,12 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.28 0.04 250);
   --sidebar-ring: oklch(0.75 0.18 95);
-}
+} */
 
 @theme inline {
   --font-sans: "Geist", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --color-t-primary: var(--t-primary);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
