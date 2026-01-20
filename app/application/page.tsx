@@ -4,41 +4,50 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
-import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Combobox } from "@headlessui/react";
 import CreatableSelect from "react-select/creatable";
-import type { MultiValue } from "react-select";
-
+import type { DirectoryUser, AvailableUser } from "@/lib/types";
 
 const schools = [
   "University of Michigan",
+  "University of California, Berkeley",
   "Massachusetts Institute of Technology",
+  "Harvard University",
+  "Princeton University",
+  "Yale University",
+  "Columbia University",
+  "Cornell University",
+  "University of Virginia",
+  "University of Washington",
+  "University of Texas at Austin",
+  "University of California, Los Angeles",
   "Stanford University",
+  "University of Pennsylvania",
+  "University of Maryland",
   "University of Chicago",
+  "University of Notre Dame",
   "Northwestern University",
+  "University of Illinois at Urbana-Champaign",
 ];
 
 const majors = [
   "Computer Science",
+  "Electrical Engineering",
   "Applied Mathematics",
+  "Physics",
+  "Mathematics",
+  "Finance",
   "Data Science",
   "Economics",
-  "Engineering",
   "Statistics",
 ];
 
-const gradYears = Array.from({ length: 6 }, (_, idx) => `${2026 + idx}`);
-
-const defaultTeammates = [
-  { name: "Nina Patel", status: "Confirmed" },
-  { name: "Jordan Liu", status: "Confirmed" },
-];
-
-const howHeardOptions = ["Social media", "Professor or referral", "Newsletter", "Other"];
+const gradYears = Array.from({ length: 4 }, (_, idx) => `${2026 + idx}`);
+const howHeardOptions = ["Social media", "Professor or referral", "Newsletter", "Word of Mouth", "Other"];
 
 const yesNoQuestions = [
   {
@@ -53,41 +62,7 @@ const yesNoQuestions = [
   },
 ];
 
-const sampleAvailableUsers: AvailableUser[] = [
-  {
-    id: "1",
-    email: "nina.patel@example.com",
-    full_name: "Nina Patel",
-  },
-  {
-    id: "2",
-    email: "jordan.liu@example.com",
-    full_name: "Jordan Liu",
-  },
-  {
-    id: "3",
-    email: "avery.king@example.com", 
-    full_name: "Avery King",
-  },
-  {
-    id: "4",
-    email: "maya.singh@example.com",
-    full_name: "Maya Singh",
-  },
-];
-
-
-type AvailableUser = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url?: string | null; // optional if you add it later
-};
-
-type SelectOption = { value: string; label: string };
-
 const creatableSelectComponents = { IndicatorSeparator: () => null };
-
 const creatableSelectStyles = {
   container: (base: any) => ({
     ...base,
@@ -142,66 +117,48 @@ const creatableSelectStyles = {
   }),
 };
 
-const creatableSelectStylesMulti = {
-  ...creatableSelectStyles,
-  multiValue: (base: any) => ({
-    ...base,
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderRadius: "9999px",
-  }),
-  multiValueLabel: (base: any) => ({
-    ...base,
-    color: "rgba(255,255,255,0.92)",
-    fontSize: "0.75rem",
-    letterSpacing: "0.3em",
-    textTransform: "uppercase",
-    paddingLeft: "0.75rem",
-    paddingRight: "0.25rem",
-  }),
-  multiValueRemove: (base: any) => ({
-    ...base,
-    color: "rgba(255,255,255,0.70)",
-    borderRadius: "9999px",
-    paddingRight: "0.5rem",
-    paddingLeft: "0.25rem",
-    cursor: "pointer",
-  }),
-};
 
 export default function ApplicationPage() {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, loading, session } = useSession();
 
-  const metadata = (user?.user_metadata ?? {}) as Record<string, string | undefined>;
-  const lockedName = metadata.full_name ?? user?.email ?? "Unnamed applicant";
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const lockedName =
+    (typeof metadata.full_name === "string" && metadata.full_name.trim()) ||
+    [metadata.first_name, metadata.last_name]
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .join(" ")
+      .trim() ||
+    user?.email ||
+    "Unnamed applicant";
 
   const [school, setSchool] = useState("");
   const [gradYear, setGradYear] = useState(gradYears[0]);
-  const [majorTags, setMajorTags] = useState<string[]>([]);
+  const [major, setMajor] = useState<string | null>(null);
   const [resume, setResume] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  const [dragActive, setDragActive] = useState(false);
-
-  const [teammates, setTeammates] = useState(defaultTeammates);
-  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
-
-  // Option A state (HeadlessUI Combobox)
-  const [teammateQuery, setTeammateQuery] = useState("");
-  const [selectedTeammateUser, setSelectedTeammateUser] = useState<AvailableUser | null>(null);
-
-  const [teamMessage, setTeamMessage] = useState<string | null>(null);
   const [howHeard, setHowHeard] = useState("");
   const [yesNoAnswers, setYesNoAnswers] = useState<Record<string, "yes" | "no">>({
     questionOne: "yes",
     questionTwo: "yes",
   });
 
+  const [dragActive, setDragActive] = useState(false);
+
+  const [teammates, setTeammates] = useState<DirectoryUser[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
+  const [availableUsersLoading, setAvailableUsersLoading] = useState(false);
+
+  const [teammateQuery, setTeammateQuery] = useState("");
+  const [selectedTeammateUser, setSelectedTeammateUser] = useState<AvailableUser | null>(null);
+
+  const [teamMessage, setTeamMessage] = useState<string | null>(null);
+
   const filteredUsers = useMemo(() => {
     const q = teammateQuery.trim().toLowerCase();
     if (!q) return availableUsers;
 
-    return sampleAvailableUsers.filter((u) => {
+    return availableUsers.filter((u) => {
       const name = (u.full_name ?? "").toLowerCase();
       const email = u.email.toLowerCase();
       return name.includes(q) || email.includes(q);
@@ -211,12 +168,12 @@ export default function ApplicationPage() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!school || !gradYear || !majorTags.length || !resume || !howHeard.trim()) {
+    if (!school || !gradYear || !major || !resume || !howHeard.trim()) {
       setMessage("Please fill every field and upload a resume before submitting.");
       return;
     }
 
-    setMessage("Application submitted (mock). We'll handle uploads on the server later.");
+    setMessage("Application submitted.");
   };
 
   const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
@@ -237,13 +194,18 @@ export default function ApplicationPage() {
 
   const handleAddTeammate = () => {
     if (!selectedTeammateUser) {
-      setTeamMessage("Select someone from the dropdown first.");
+      return;
+    }
+
+    if (teammates.length >= 3) {
+      setTeamMessage("You can only add up to 3 teammates.");
       return;
     }
 
     const alreadyAdded = teammates.some(
-      (t) => t.name === (selectedTeammateUser.full_name ?? selectedTeammateUser.email)
+      (t) => t.id === selectedTeammateUser.id
     );
+
     if (alreadyAdded) {
       setTeamMessage("That teammate is already on your list.");
       return;
@@ -251,7 +213,7 @@ export default function ApplicationPage() {
 
     setTeammates((prev) => [
       ...prev,
-      { name: selectedTeammateUser.full_name ?? selectedTeammateUser.email, status: "Invited" },
+      {id: selectedTeammateUser.id, email: selectedTeammateUser.email, full_name: selectedTeammateUser.full_name},
     ]);
 
     setTeamMessage("Teammate added.");
@@ -263,27 +225,91 @@ export default function ApplicationPage() {
     setYesNoAnswers((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSaveDraftAction = () => {
-    setMessage("Draft saved locally.");
-  };
-
   useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase.from("users").select("id, email, full_name").limit(50);
-      if (!error) setAvailableUsers((data ?? []) as AvailableUser[]);
+    let mounted = true;
+
+    const fetchAllUsers = async () => {
+      setAvailableUsersLoading(true);
+      setTeamMessage(null);
+
+      const token = session?.access_token;
+      if (!token) {
+        if (mounted) setTeamMessage("Could not load user directory (missing session token).");
+        if (mounted) setAvailableUsersLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/user-directory", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        if (mounted) setTeamMessage("Could not load user directory. Please refresh.");
+        if (mounted) setAvailableUsersLoading(false);
+        return;
+      }
+
+      const json = (await res.json()) as { users?: AvailableUser[] };
+      const allUsers = Array.isArray(json.users) ? json.users : [];
+
+      if (!mounted) return;
+
+      const myId = user?.id;
+      setAvailableUsers(myId ? allUsers.filter((u) => u.id !== myId) : allUsers);
+      setAvailableUsersLoading(false);
     };
 
-    fetchUsers();
-  }, []);
+    if (loading) return;
+    if (!user) {
+      setAvailableUsersLoading(false);
+      return;
+    }
+
+    fetchAllUsers();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loading, session?.access_token, user]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/signin");
+    }
+  }, [loading, router, user]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
+        <p className="text-lg font-semibold text-white/80">Checking your session...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
+        <p className="text-lg font-semibold text-white/80">Redirecting to sign in...</p>
+      </div>
+    );
+  }
+
+  if (availableUsersLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
+        <p className="text-lg font-semibold text-white/80">Loading application... please wait 5 seconds</p>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#031232] px-4 py-16 text-white">
-      <div className="mx-auto w-full max-w-3xl space-y-7 rounded-[32px] border border-white/10 bg-slate-900/60 p-10 shadow-2xl backdrop-blur">
+    <main className="min-h-screen bg-background px-4 py-16 pt-24">
+      <div className="mx-auto w-full max-w-3xl space-y-7 rounded-[32px] border border-white/10 bg-slate-900/60 p-10 shadow-2xl backdrop-blur-sm">
         
-        <div className="flex items-center justify-between text-sm text-white/60">
+        <div className="flex items-center justify-between text-sm text-t-primary/50">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 uppercase tracking-[0.3em] hover:text-white"
+            className="flex items-center gap-2 uppercase tracking-[0.3em] hover:text-t-primary"
           >
             <span aria-hidden="true">←</span>
             Back to dashboard
@@ -291,12 +317,12 @@ export default function ApplicationPage() {
         </div>
         
         <header>
-          <p className="text-xs uppercase tracking-[0.4em] text-white/50">Application</p>
-          <h1 className="mt-2 text-3xl font-semibold">Create your MIG Quant Conference application</h1>
+          <p className="text-xs uppercase tracking-[0.4em] text-t-primary/50">Application</p>
+          <h1 className="mt-2 text-3xl font-semibold text-t-primary">Create your MIG Quant Conference application</h1>
         </header>
 
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-6 text-t-primary" onSubmit={handleSubmit}>
           <div>
             <Label>Name</Label>
             <Input value={lockedName} disabled className="mt-2" aria-label="Applicant name" />
@@ -307,6 +333,7 @@ export default function ApplicationPage() {
             <CreatableSelect
                 options={schools.map((s) => ({ value: s, label: s }))}
                 placeholder="Choose or type a school"
+                value={school ? { value: school, label: school } : null}
                 onChange={(option) => setSchool(option?.value ?? "")}
                 components={creatableSelectComponents}
                 classNamePrefix="react-select"
@@ -315,18 +342,15 @@ export default function ApplicationPage() {
           </div>
 
           <div>
-            <Label>Majors (tagged)</Label>
+            <Label>Majors</Label>
             <CreatableSelect
-              isMulti
               options={majors.map((m) => ({ value: m, label: m }))}
               placeholder="Select or type majors"
-              value={majorTags.map((t) => ({ value: t, label: t }))}
-              onChange={(newValue: MultiValue<SelectOption>) =>
-                setMajorTags(newValue.map((v) => v.value))
-              }
+              value={major ? { value: major, label: major } : null}
+              onChange={(option) =>setMajor(option?.value ?? null)}
               components={creatableSelectComponents}
               classNamePrefix="react-select"
-              styles={creatableSelectStylesMulti}
+              styles={creatableSelectStyles}
             />
           </div>
 
@@ -365,16 +389,15 @@ export default function ApplicationPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               {teammates.map((member) => (
                 <span
-                  key={`${member.name}-${member.status}`}
+                  key={`${member.id}`}
                   className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white"
                 >
-                  <span>{member.name}</span>
-                  <span className="text-[10px] tracking-[0.3em] text-white/60">{member.status}</span>
+                  <span>{member.full_name}</span>
                   <button
                     type="button"
-                    onClick={() => setTeammates((prev) => prev.filter((t) => t.name !== member.name))}
+                    onClick={() => setTeammates((prev) => prev.filter((t) => t.full_name !== member.full_name))}
                     className="ml-1 text-white/60 hover:text-white"
-                    aria-label={`Remove teammate ${member.name}`}
+                    aria-label={`Remove teammate ${member.full_name}`}
                   >
                     ×
                   </button>
@@ -382,15 +405,14 @@ export default function ApplicationPage() {
               ))}
             </div>
 
-            {/* Option A: Google-like searchable dropdown */}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <div className="relative w-full">
-                <Combobox value={selectedTeammateUser} onChange={setSelectedTeammateUser} nullable>
+                <Combobox value={selectedTeammateUser} onChange={setSelectedTeammateUser} nullable immediate>
                   <div className="relative">
                     <Combobox.Input
-                      className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm font-sans text-white/90 outline-none placeholder:text-white/60 focus:border-white/20 focus:ring-2 focus:ring-white/10"
+                      className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm font-sans text-white/90 outline-hidden placeholder:text-white/60 focus:border-white/20 focus:ring-2 focus:ring-white/10"
                       placeholder="Add people by name or email"
-                      displayValue={(u: AvailableUser) => u?.email ?? ""}
+                      displayValue={(u: AvailableUser | null) => u?.email ?? ""}
                       onChange={(e) => setTeammateQuery(e.target.value)}
                     />
                     <Combobox.Button className="absolute inset-y-0 right-0 flex items-center px-2 text-white/60 hover:text-white">
@@ -404,7 +426,7 @@ export default function ApplicationPage() {
                     </Combobox.Button>
                   </div>
 
-                  <Combobox.Options className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-white/10 bg-[#020617] py-1 shadow-2xl backdrop-blur">
+                  <Combobox.Options className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-white/10 bg-[#020617] py-1 shadow-2xl backdrop-blur-sm">
                     {filteredUsers.length === 0 ? (
                       <div className="px-3 py-2 text-sm text-white/50">No matches</div>
                     ) : (
@@ -460,11 +482,11 @@ export default function ApplicationPage() {
                 onClick={handleAddTeammate}
                 disabled={!selectedTeammateUser}
               >
-                Invite
+                Add
               </Button>
             </div>
 
-            {teamMessage && <p className="mt-2 text-xs text-[color:var(--accent)]">{teamMessage}</p>}
+            {teamMessage && <p className="mt-2 text-xs text-accent">{teamMessage}</p>}
           </div>
 
           {/* Resume upload */}
@@ -476,7 +498,7 @@ export default function ApplicationPage() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               className={`mt-2 flex flex-col items-center justify-center rounded-2xl border-2 px-4 py-8 text-sm text-white transition ${
-                dragActive ? "border-[color:var(--accent)] bg-white/5" : "border-white/20 bg-black/40"
+                dragActive ? "border-accent bg-white/5" : "border-white/20 bg-black/40 hover:border-white/55 transition-all duration-100"
               }`}
             >
               <Input
@@ -510,7 +532,7 @@ export default function ApplicationPage() {
                         value={value}
                         checked={yesNoAnswers[question.id] === value}
                         onChange={() => handleYesNoChange(question.id, value)}
-                        className="h-4 w-4 rounded-full border-white/50 bg-transparent text-white accent-[color:var(--accent)]"
+                        className="h-4 w-4 rounded-full border-white/50 bg-transparent text-white accent-accent"
                       />
                       {value === "yes" ? "Yes" : "No"}
                     </label>
@@ -521,20 +543,12 @@ export default function ApplicationPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <Button type="submit" className="uppercase tracking-[0.4em]">
+            <Button type="submit" className="uppercase tracking-[0.4em] hover:bg-primary/50">
               Submit application
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleSaveDraftAction}
-              className="uppercase tracking-[0.4em]"
-            >
-              Save draft
             </Button>
           </div>
 
-          {message && <p className="text-sm text-[color:var(--accent)]">{message}</p>}
+          {message && <p className="text-sm text-accent">{message}</p>}
         </form>
       </div>
     </main>
