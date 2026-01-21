@@ -55,7 +55,7 @@ function LogoCard({ s, tier }: { s: Sponsor; tier: Tier["id"] }) {
   const inner = (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border bg-white/10 backdrop-blur",
+        "group relative overflow-hidden rounded-2xl border border-border bg-white/20 backdrop-blur",
         "transition-transform duration-300 will-change-transform hover:-translate-y-1",
         glow
       )}
@@ -98,17 +98,17 @@ export default function SponsorsShowcasePage() {
         id: "gold",
         label: "Gold Tier",
         sponsors: [
-          { name: "IMC Trading", href: "https://www.imc.com", logoSrc: "/sponsors/IMCLogo.png"},
+          { name: "IMC Trading", href: "https://www.imc.com", logoSrc: "/imc-logo.png"},
         ],
       },
       {
         id: "silver",
         label: "Silver Tier",
         sponsors: [
-          { name: "Old Mission", href: "https://www.oldmissioncapital.com", logoSrc: "/sponsors/OldMissionLogo.png"},
-          { name: "Jane Street", href: "https://www.janestreet.com", logoSrc: "/sponsors/JaneStreetLogo.png"},
-          { name: "Citadel Securities", href: "https://www.citadelsecurities.com", logoSrc: "/sponsors/CitadelLogo.png"},
-          { name: "Optiver", href: "https://www.optiver.com", logoSrc: "/sponsors/OptiverLogo.png"},
+          { name: "Old Mission", href: "https://www.oldmissioncapital.com", logoSrc: "/oldmission-logo.png"},
+          { name: "Jane Street", href: "https://www.janestreet.com", logoSrc: "/janestreet-logo.png"},
+          { name: "Citadel Securities", href: "https://www.citadelsecurities.com", logoSrc: "/citadel-logo.png"},
+          { name: "Optiver", href: "https://www.optiver.com", logoSrc: "/optiver-logo.png"},
 
         ],
       },
@@ -117,10 +117,10 @@ export default function SponsorsShowcasePage() {
         label: "Bronze Tier",
         description: "Community partners backing student-led quantitative finance.",
         sponsors: [
-          { name: "Kalshi", href: "https://www.kalshi.com", logoSrc: "/sponsors/KalshiLogo.png"},
-          { name: "Coinbase", href: "https://www.coinbase.com", logoSrc: "/sponsors/CoinbaseLogo.png"},
-          { name: "Peak6", href: "https://www.peak6.com", logoSrc: "/sponsors/Peak6Logo.png"},
-          { name: "Headlands", href: "https://www.headlandstech.com", logoSrc: "/sponsors/HeadlandsLogo.png"},
+          { name: "Kalshi", href: "https://www.kalshi.com", logoSrc: "/kalshi-logo.png"},
+          { name: "Coinbase", href: "https://www.coinbase.com", logoSrc: "/coinbase-logo.png"},
+          { name: "Peak6", href: "https://www.peak6.com", logoSrc: "/peak6-logo.png"},
+          { name: "Headlands", href: "https://www.headlandstech.com", logoSrc: "/headlands-logo.png"},
         ],
       },
     ],
