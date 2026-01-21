@@ -89,12 +89,12 @@ export default function NavBar() {
             {/* Nav Links */}
             <div
               ref={navRef}
-              className="space-x-4 font-sans font-semibold tracking-[0.1em]"
+              className="space-x-4 font-sans font-semibold tracking-widest"
             >
                 {/* <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link>  */}
-                {/* <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/announcements'>Announcements</Link> */}
-                {/* <button className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} onClick={() => scrollToSection("faq")}>FAQ</button>  */}
-                <Link
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/sponsors'>Sponsors</Link>
+                <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/faq'>FAQ</Link>
+                {/* <Link
                   className={`bg-yellow-700 hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === "/schedule" ? "text-gray-900" : ""}`}
                   href={user ? "/dashboard" : "/signup"}
                 >
@@ -111,7 +111,7 @@ export default function NavBar() {
                       <span className="text-xs">{dropdownOpen ? "▲" : "▼"}</span>
                     </button>
                     {dropdownOpen && (
-                      <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-sm shadow-2xl backdrop-blur">
+                      <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-sm shadow-2xl backdrop-blur-sm">
                         <p className="text-xs uppercase tracking-[0.3em] text-white/60">Logged in as</p>
                         <p className="mt-2 font-semibold text-white">{displayName}</p>
                         <p className="text-xs text-white/60">{user.email}</p>
@@ -138,7 +138,7 @@ export default function NavBar() {
                   >
                     Sign in
                   </Link>
-                )}
+                )} */}
             </div>
           </div>
         </nav>
