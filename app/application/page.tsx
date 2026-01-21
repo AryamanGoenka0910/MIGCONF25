@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 
 import { Combobox } from "@headlessui/react";
 import CreatableSelect from "react-select/creatable";
+import type { StylesConfig } from "react-select";
 import type { DirectoryUser, AvailableUser } from "@/lib/types";
 
 const schools = [
@@ -62,13 +63,17 @@ const yesNoQuestions = [
   },
 ];
 
+const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5MB
+
 const creatableSelectComponents = { IndicatorSeparator: () => null };
-const creatableSelectStyles = {
-  container: (base: any) => ({
+type SelectOption = { value: string; label: string };
+
+const creatableSelectStyles: StylesConfig<SelectOption, false> = {
+  container: (base) => ({
     ...base,
     marginTop: "0.5rem", // mt-2
   }),
-  control: (base: any, state: any) => ({
+  control: (base, state) => ({
     ...base,
     backgroundColor: "rgba(0,0,0,0.4)",
     borderRadius: "0.375rem", // rounded-md
@@ -79,17 +84,17 @@ const creatableSelectStyles = {
     cursor: "text",
     transition: "border-color 150ms ease, box-shadow 150ms ease",
   }),
-  valueContainer: (base: any) => ({
+  valueContainer: (base) => ({
     ...base,
     padding: "0 0.75rem", // px-3
   }),
-  input: (base: any) => ({
+  input: (base) => ({
     ...base,
     margin: 0,
     padding: 0,
     color: "rgba(255,255,255,0.92)",
   }),
-  menu: (base: any) => ({
+  menu: (base) => ({
     ...base,
     backgroundColor: "#020617", // solid
     borderRadius: "0.5rem",
@@ -97,21 +102,21 @@ const creatableSelectStyles = {
     marginTop: "0.25rem",
     overflow: "hidden",
   }),
-  option: (base: any, state: any) => ({
+  option: (base, state) => ({
     ...base,
     backgroundColor: state.isFocused ? "rgba(255,255,255,0.08)" : "transparent",
     color: "rgba(255,255,255,0.92)",
     cursor: "pointer",
   }),
-  singleValue: (base: any) => ({
+  singleValue: (base) => ({
     ...base,
     color: "rgba(255,255,255,0.92)",
   }),
-  placeholder: (base: any) => ({
+  placeholder: (base) => ({
     ...base,
     color: "rgba(255,255,255,0.60)",
   }),
-  dropdownIndicator: (base: any) => ({
+  dropdownIndicator: (base) => ({
     ...base,
     color: "rgba(255,255,255,0.60)",
   }),
@@ -165,11 +170,39 @@ export default function ApplicationPage() {
     });
   }, [availableUsers, teammateQuery]);
 
+  const handleResumeFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setResume(null);
+      return;
+    }
+
+    if (files.length > 1) {
+      setResume(null);
+      setMessage("Please upload only 1 file.");
+      return;
+    }
+
+    const file = files[0];
+    if (file.size > MAX_RESUME_BYTES) {
+      setResume(null);
+      setMessage("Resume must be 5MB or less.");
+      return;
+    }
+
+    setMessage(null);
+    setResume(file);
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!school || !gradYear || !major || !resume || !howHeard.trim()) {
       setMessage("Please fill every field and upload a resume before submitting.");
+      return;
+    }
+
+    if (resume.size > MAX_RESUME_BYTES) {
+      setMessage("Resume must be 5MB or less.");
       return;
     }
 
@@ -179,8 +212,7 @@ export default function ApplicationPage() {
   const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
     setDragActive(false);
-    const file = event.dataTransfer.files[0];
-    if (file) setResume(file);
+    handleResumeFiles(event.dataTransfer.files);
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
@@ -505,7 +537,14 @@ export default function ApplicationPage() {
                 id="resume-upload"
                 type="file"
                 accept=".pdf,.doc,.docx"
-                onChange={(event) => setResume(event.target.files?.[0] ?? null)}
+                multiple={false}
+                onChange={(event) => {
+                  handleResumeFiles(event.currentTarget.files);
+                  // allow re-selecting the same file after an invalid attempt
+                  if (event.currentTarget.files && event.currentTarget.files.length !== 1) {
+                    event.currentTarget.value = "";
+                  }
+                }}
                 className="sr-only"
               />
               <div className="text-center">
