@@ -89,7 +89,7 @@ export default function NavBar() {
             {/* Nav Links */}
             <div
               ref={navRef}
-              className="space-x-4 font-sans font-semibold tracking-widest"
+              className="space-x-4 font-sans font-bold tracking-widest"
             >
                 {/* <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link>  */}
                 <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/sponsors'>Sponsors</Link>
