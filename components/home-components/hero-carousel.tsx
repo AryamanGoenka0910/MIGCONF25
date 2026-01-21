@@ -43,13 +43,7 @@ const HeroCarousel = () => {
   return (
     <section className="relative h-[650px] w-full overflow-hidden">
       {slides.map((slide, index) => (
-        <div
-          key={index}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-700",
-            index === currentSlide ? "opacity-100" : "opacity-0"
-          )}
-        >
+        <div key={index} className="absolute inset-0 transition-opacity duration-700">
           {/* Background image */}
           <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${slide.image})` }} />
 

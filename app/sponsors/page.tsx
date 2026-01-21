@@ -105,8 +105,8 @@ export default function SponsorsShowcasePage() {
         id: "silver",
         label: "Silver Tier",
         sponsors: [
-          { name: "Old Mission", href: "https://www.oldmissioncapital.com", logoSrc: "/oldmission-logo.png"},
-          { name: "Jane Street", href: "https://www.janestreet.com", logoSrc: "/janestreet-logo.png"},
+          { name: "Old Mission", href: "https://www.oldmissioncapital.com", logoSrc: "/old-mission-logo.png"},
+          { name: "Jane Street", href: "https://www.janestreet.com", logoSrc: "/js-logo.png"},
           { name: "Citadel Securities", href: "https://www.citadelsecurities.com", logoSrc: "/citadel-logo.png"},
           { name: "Optiver", href: "https://www.optiver.com", logoSrc: "/optiver-logo.png"},
 
