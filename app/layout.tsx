@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist } from "next/font/google"
 import { Analytics } from "@vercel/analytics/react";
 
 import NavBar from "@/components/Navbar";
@@ -8,7 +8,6 @@ import "./globals.css";
 
 
 const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
@@ -56,7 +55,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${_geist.className} ${_geistMono.className} antialiased`}>
+      <body className={`${_geist.className} antialiased`}>
         <NavBar />
         {children}
         <Analytics />
