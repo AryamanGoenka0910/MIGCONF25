@@ -6,7 +6,7 @@ import HomeFAQ from '@/components/HomeFAQ';
 
 export default function FAQ() {
   return (
-    <div className="relative min-h-screen overflow-hidden pt-24">
+    <div className="relative min-h-screen overflow-hidden pt-12 md:pt-24">
       <BackgroundGlow />
       
       <div className="relative mx-auto max-w-6xl px-6 py-8">

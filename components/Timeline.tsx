@@ -75,7 +75,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ time, title, description, i
       )}
     </div>
 
-    <div className="bg-white shadow rounded-lg p-4 w-full transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
+    <div className="bg-white shadow-sm rounded-lg p-4 w-full transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
       <div className="text-sm text-gray-500">{time}</div>
       <h3 className="font-semibold text-lg text-gray-800 mt-1">{title}</h3>
       <p className="text-gray-600 mt-1">{description}</p>

@@ -55,9 +55,6 @@ export default function Home() {
                   <h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
                     Countdown to applications closing
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Selective attendee list. Quant games, workshops, and sponsor networking.
-                  </p>
                 </div>
 
                 <div className="w-full md:w-auto">

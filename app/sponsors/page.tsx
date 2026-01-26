@@ -130,7 +130,7 @@ export default function SponsorsShowcasePage() {
   const totalSponsors = tiers.reduce((acc, t) => acc + t.sponsors.length, 0);
 
   return (
-    <main className="relative min-h-screen overflow-hidden pt-32 pb-8">
+    <main className="relative min-h-screen overflow-hidden pt-20 md:pt-32 pb-8">
         
         <BackgroundGlow />
 

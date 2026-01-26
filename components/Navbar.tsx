@@ -13,6 +13,7 @@ export default function NavBar() {
 
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -56,6 +57,16 @@ export default function NavBar() {
     setDropdownOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 12);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const scrollToSection = (id: string) => {
   
     if (pathname !== "/") {
@@ -68,14 +79,22 @@ export default function NavBar() {
     }
   };
   
+  const shouldUseScrollBackground =
+    isScrolled && (pathname === "/" || pathname === "/faq" || pathname === "/sponsors");
 
   return (
     <>
       {isSmallScreen ? (
         <Hamburger />
       ) : (
-        <nav className="bg-transparent text-white fixed top-0 left-0 w-full z-10">
-          <div className="relative max-w-7xl mx-auto px-2 py-3 flex items-center justify-between">
+        <nav
+          className={`text-white fixed top-0 left-0 w-full z-10 transition-colors duration-200 ${
+            shouldUseScrollBackground
+              ? "bg-background/40 backdrop-blur-md"
+              : "bg-transparent"
+          }`}
+        >
+          <div className="relative max-w-7xl mx-auto py-3 flex items-center justify-between sm:px-6">
             <div className="text-xl font-bold">
                 <Link href="/" className="flex items-center">
                   {pathname != '/schedule' ? (
