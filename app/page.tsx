@@ -5,6 +5,8 @@ import CountdownTimer from "@/components/home-components/Timer"
 import { Button } from "@/components/ui/button"
 import { Calendar, Users, Award } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useSession } from "@/hooks/useSession"
 
 const infoCards = [
   {
@@ -29,6 +31,10 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 export default function Home() {
+  const router = useRouter()
+  const { user, loading } = useSession()
+  const ctaHref = user ? "/dashboard" : "/signup"
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       {/* Sponsor-page style background */}
@@ -60,7 +66,15 @@ export default function Home() {
                 <div className="w-full md:w-auto">
                   <CountdownTimer targetDate="2026-03-01T00:00:00Z" />
                   <div className="mt-6 flex justify-center md:justify-end">
-                    <Button size="xl" variant="default">
+                    <Button
+                      size="xl"
+                      variant="default"
+                      disabled={loading}
+                      onClick={() => {
+                        if (loading) return
+                        router.push(ctaHref)
+                      }}
+                    >
                       Apply Now
                     </Button>
                   </div>
@@ -123,7 +137,15 @@ export default function Home() {
                   Apply by <strong className="text-foreground">March 1st, 2026</strong>.
                 </p>
                 <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                  <Button size="xxl" variant="default">
+                  <Button
+                    size="xxl"
+                    variant="default"
+                    disabled={loading}
+                    onClick={() => {
+                      if (loading) return
+                      router.push(ctaHref)
+                    }}
+                  >
                     Register Now
                   </Button>
                 </div>

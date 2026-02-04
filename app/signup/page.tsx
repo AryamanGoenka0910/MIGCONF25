@@ -180,7 +180,7 @@ export default function SignUpPage() {
           <p className="mt-3 text-xl font-semibold uppercase tracking-[0.2em] text-t-primary/70">Join the MIG Quant Conference</p>
     
           {/* Google */}
-          <div className="mt-8 space-y-4">
+          {/* <div className="mt-8 space-y-4">
             <button
               type="button"
               onClick={handleGoogle}
@@ -195,7 +195,7 @@ export default function SignUpPage() {
               <span className="text-xs uppercase tracking-[0.3em]">or continue with email</span>
               <div className="h-px flex-1 bg-white/15" />
             </div>
-          </div>
+          </div> */}
 
           {/* Form */}
           <div className="mt-4">

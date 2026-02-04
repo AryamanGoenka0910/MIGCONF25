@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight, DollarSign, MapPin, Plane } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { useSession } from "@/hooks/useSession"
 
 const slides = [
   {
@@ -30,6 +32,10 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 const HeroCarousel = () => {
+  const router = useRouter()
+  const { user, loading } = useSession()
+  const ctaHref = user ? "/dashboard" : "/signup"
+
   const [currentSlide, setCurrentSlide] = useState(0)
   // Base/background layer stays on the previous slide while the new one fades in on top.
   const [baseSlide, setBaseSlide] = useState(0)
@@ -104,7 +110,15 @@ const HeroCarousel = () => {
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
-                <Button size="xl" variant="outline">
+                <Button
+                  size="xl"
+                  variant="outline"
+                  disabled={loading}
+                  onClick={() => {
+                    if (loading) return
+                    router.push(ctaHref)
+                  }}
+                >
                   Register Now
                 </Button>
               </div>
