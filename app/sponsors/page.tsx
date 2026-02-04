@@ -55,7 +55,7 @@ function LogoCard({ s, tier }: { s: Sponsor; tier: Tier["id"] }) {
   const inner = (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border bg-white/20 backdrop-blur",
+        "group relative overflow-hidden rounded-2xl border border-border bg-white backdrop-blur",
         "transition-transform duration-300 will-change-transform hover:-translate-y-1",
         glow
       )}
@@ -121,6 +121,7 @@ export default function SponsorsShowcasePage() {
           { name: "Coinbase", href: "https://www.coinbase.com", logoSrc: "/coinbase-logo.png"},
           { name: "Peak6", href: "https://www.peak6.com", logoSrc: "/peak6-logo.png"},
           { name: "Headlands", href: "https://www.headlandstech.com", logoSrc: "/headlands-logo.png"},
+          { name: "SIG", href: "https://www.sig.com", logoSrc: "/sig-logo.png"},
         ],
       },
     ],
@@ -145,7 +146,7 @@ export default function SponsorsShowcasePage() {
             <header className="animate-fade-in-up opacity-0">
                 <div className="mt-8 grid gap-4 rounded-2xl border border-border bg-card/40 p-5 backdrop-blur md:grid-cols-3">
                     {[
-                    { k: `${totalSponsors}`, v: "sponsoring firms" },
+                    { k: `${totalSponsors}+`, v: "sponsoring firms" },
                     { k: "3", v: "tiers" },
                     { k: "120+", v: "students attending" },
                     ].map((s) => (
