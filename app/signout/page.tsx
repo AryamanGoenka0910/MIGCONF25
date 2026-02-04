@@ -1,11 +1,13 @@
 import SignOutClient from "@/app/signout/signout-client";
 
 type PageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  // Next 15 types `searchParams` as a Promise in generated PageProps.
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function SignOutPage({ searchParams }: PageProps) {
-  const raw = searchParams?.returnTo;
+export default async function SignOutPage({ searchParams }: PageProps) {
+  const sp = (await searchParams) ?? {};
+  const raw = sp.returnTo;
   const returnTo = typeof raw === "string" && raw.startsWith("/") ? raw : "/signin";
   return <SignOutClient returnTo={returnTo} />;
 }
