@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
+import { localSignOut } from "@/lib/signout";
 
 import EyeOnIcon from "@/components/auth-components/see-password";
 import EyeOffIcon from "@/components/auth-components/hide-password";
@@ -189,7 +190,7 @@ export default function ResetPasswordPage() {
       }
 
       // Don't keep the recovery session around; otherwise the user appears logged in.
-      await supabase.auth.signOut();
+      await localSignOut();
 
       setMessage("Password updated successfully. You can now sign in.");
       router.replace("/signin");

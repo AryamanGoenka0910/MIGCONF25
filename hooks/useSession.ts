@@ -8,7 +8,6 @@ export type SessionState = {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  role: "attendee" | "sponsor" | "admin" | string;
 };
 
 export function useSession() {
@@ -16,7 +15,6 @@ export function useSession() {
     session: null,
     user: null,
     loading: true,
-    role: "attendee",
   });
 
   useEffect(() => {
@@ -30,7 +28,6 @@ export function useSession() {
           session: data.session,
           user: data.session?.user ?? null,
           loading: false,
-          role: data.session?.user?.app_metadata?.role ?? data.session?.user?.user_metadata?.role ?? "attendee",
         }));
       })
       .catch(() => {
@@ -44,7 +41,6 @@ export function useSession() {
         session,
         user: session?.user ?? null,
         loading: false,
-        role: session?.user?.app_metadata?.role ?? session?.user?.user_metadata?.role ?? "attendee",
       });
     });
 

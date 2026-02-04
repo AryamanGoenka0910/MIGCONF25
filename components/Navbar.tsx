@@ -5,8 +5,8 @@ import Hamburger from "@/components/Hamburger";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase-client";
 import { useSession } from "@/hooks/useSession";
+import { beginSignOut } from "@/lib/signout";
 
 
 export default function NavBar() {
@@ -17,7 +17,7 @@ export default function NavBar() {
   const navRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, role } = useSession();
+  const { user } = useSession();
 
   const metadata = (user?.user_metadata ?? {}) as Record<string, string | undefined>;
   const displayName =
@@ -82,6 +82,10 @@ export default function NavBar() {
   const shouldUseScrollBackground =
     isScrolled && (pathname === "/" || pathname === "/faq" || pathname === "/sponsors");
 
+  // The sign-out route is a dedicated full-screen loading UI.
+  // Hide the global navbar there to avoid visual flicker.
+  if (pathname === "/signout") return null;
+
   return (
     <>
       {isSmallScreen ? (
@@ -94,7 +98,7 @@ export default function NavBar() {
               : "bg-transparent"
           }`}
         >
-          <div className="relative max-w-7xl mx-auto py-3 flex items-center justify-between sm:px-6">
+          <div className="relative max-w-8xl mx-auto py-3 flex items-center justify-between px-8">
             <div className="text-xl font-bold">
                 <Link href="/" className="flex items-center">
                   {pathname != '/schedule' ? (
@@ -113,7 +117,7 @@ export default function NavBar() {
                 {/* <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/schedule'>Schedule</Link>  */}
                 <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/sponsors'>Sponsors</Link>
                 <Link className={`hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === '/schedule' ? 'text-gray-900' : ''}`} href='/faq'>FAQ</Link>
-                {/* <Link
+                <Link
                   className={`bg-yellow-700 hover:bg-gray-700 px-3 py-2 rounded-md ${pathname === "/schedule" ? "text-gray-900" : ""}`}
                   href={user ? "/dashboard" : "/signup"}
                 >
@@ -139,9 +143,9 @@ export default function NavBar() {
                             type="button"
                             className="w-full rounded-2xl bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 transition hover:bg-white/80"
                             onClick={async () => {
-                              await supabase.auth.signOut();
                               setDropdownOpen(false);
-                              router.push("/");
+                              // Navigate immediately to a dedicated sign-out screen.
+                              beginSignOut(router, { returnTo: "/" });
                             }}
                           >
                             Sign out
@@ -157,7 +161,7 @@ export default function NavBar() {
                   >
                     Sign in
                   </Link>
-                )} */}
+                )}
             </div>
           </div>
         </nav>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useSession } from "@/hooks/useSession";
+import BackgroundGlow from "@/components/background-glow";
+import MessageOverlay from "@/components/MessageOverlay";
 
 import EyeOnIcon from "@/components/auth-components/see-password";
 import EyeOffIcon from "@/components/auth-components/hide-password";
@@ -100,9 +102,11 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#032456]">
+      <div className="min-h-screen">
+      <BackgroundGlow />
+
       <div className="flex min-h-screen items-center justify-center px-4 py-20">
-        <div className="w-full max-w-lg rounded-[40px] bg-muted/80 p-8 shadow-2xl">
+        <div className="w-full max-w-lg rounded-[40px] bg-muted p-8">
           <h1 className="text-4xl font-semibold text-t-primary">Welcome Back</h1>
           <p className="mt-3 text-xl font-semibold uppercase tracking-[0.2em] text-t-primary/70">
             Log In to the MIG Quant Conference
@@ -192,31 +196,7 @@ export default function SignInPage() {
               </button>
             </form>
 
-            {message && 
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-                onClick={() => setMessage(null)}
-                role="dialog"
-                aria-modal="true"
-              >
-                <div
-                  className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm text-white/90">{message}</p>
-                    <button
-                      type="button"
-                      className="rounded-md px-2 py-1 text-white/60 hover:text-white"
-                      onClick={() => setMessage(null)}
-                      aria-label="Close message"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              </div>
-              }
+            <MessageOverlay message={message} onClose={() => setMessage(null)} />
 
             <div className="mt-6 flex flex-col items-center gap-3">
               <button

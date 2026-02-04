@@ -12,6 +12,10 @@ import { Combobox } from "@headlessui/react";
 import CreatableSelect from "react-select/creatable";
 import type { StylesConfig } from "react-select";
 import type { DirectoryUser, AvailableUser } from "@/lib/types";
+import { Info } from "lucide-react";
+import MessageOverlay from "@/components/MessageOverlay";
+
+import { getUserDisplayName } from "@/lib/utils";
 
 const schools = [
   "University of Michigan",
@@ -58,8 +62,8 @@ const yesNoQuestions = [
   },
   {
     id: "questionTwo",
-    title: "Presentation readiness",
-    body: "Are you comfortable delivering a 10-minute pitch at the conference?",
+    title: "Previous Trading Experience",
+    body: "Do you have any previous trading experience (ie. internships, trading clubs, etc.)?",
   },
 ];
 
@@ -127,15 +131,15 @@ export default function ApplicationPage() {
   const router = useRouter();
   const { user, loading, session } = useSession();
 
-  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const lockedName =
-    (typeof metadata.full_name === "string" && metadata.full_name.trim()) ||
-    [metadata.first_name, metadata.last_name]
-      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-      .join(" ")
-      .trim() ||
-    user?.email ||
-    "Unnamed applicant";
+  const lockedName = getUserDisplayName(user);
+
+  const [checkingSubmitted, setCheckingSubmitted] = useState(true);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+
+  const [hasTeam, setHasTeam] = useState(false);
+  const [hasTeamLoading, setHasTeamLoading] = useState(false);
+  const [teamRosterLoading, setTeamRosterLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [school, setSchool] = useState("");
   const [gradYear, setGradYear] = useState(gradYears[0]);
@@ -158,6 +162,7 @@ export default function ApplicationPage() {
   const [selectedTeammateUser, setSelectedTeammateUser] = useState<AvailableUser | null>(null);
 
   const [teamMessage, setTeamMessage] = useState<string | null>(null);
+  const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
 
   const filteredUsers = useMemo(() => {
     const q = teammateQuery.trim().toLowerCase();
@@ -195,18 +200,81 @@ export default function ApplicationPage() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
 
     if (!school || !gradYear || !major || !resume || !howHeard.trim()) {
       setMessage("Please fill every field and upload a resume before submitting.");
+      setSubmitting(false);
       return;
     }
 
     if (resume.size > MAX_RESUME_BYTES) {
       setMessage("Resume must be 5MB or less.");
+      setSubmitting(false);
       return;
     }
 
-    setMessage("Application submitted.");
+    const token = session?.access_token;
+    if (!token) {
+      setMessage("You must be signed in to submit.");
+      setSubmitting(false);
+      return;
+    }
+
+    setMessage("Submitting application...");
+
+    void (async () => {
+      try {
+        const form = new FormData();
+        form.set("school", school);
+        form.set("major", major ?? "");
+        form.set("grad_year", gradYear);
+        form.set("how_did_you_hear", howHeard);
+        form.set("teammates", JSON.stringify(teammates.length ? teammates.map((t) => t.id) : null));
+        form.set("travel_reimbursement", String(yesNoAnswers.questionOne === "yes"));
+        form.set("trading_experience", String(yesNoAnswers.questionTwo === "yes"));
+        form.set("has_team", String(hasTeam));
+        form.set("resume", resume);
+
+        const res = await fetch("/api/application", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        });
+
+        const json = (await res.json()) as { error?: string; id?: number | string };
+        if (!res.ok) {
+          setMessage(json.error ?? "Failed to submit application. Please try again.");
+          return;
+        }
+
+        // Mark as submitted (cache) and invalidate dashboard caches so it refetches team_id/team.
+        try {
+          if (user?.id) {
+            sessionStorage.setItem(
+              `migconf.application-submitted.v1:${user.id}`,
+              JSON.stringify({ submitted: true })
+            );
+            sessionStorage.removeItem(`migconf.user.v1:${user.id}`);
+            sessionStorage.removeItem(`migconf.team.v1:${user.id}`);
+          }
+        } catch {
+          // ignore cache errors
+        }
+
+        setMessage(`Application submitted. Reference ID: ${json.id ?? "unknown"}`);
+        setAlreadySubmitted(true);
+        router.replace("/dashboard");
+        router.refresh();
+      } catch {
+        setMessage("Failed to submit application. Please check your connection and try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
@@ -260,6 +328,76 @@ export default function ApplicationPage() {
   useEffect(() => {
     let mounted = true;
 
+    type TeamApiResponse =
+      | { team: null }
+      | {
+          team: {
+            team_id: number;
+            members: Array<{
+              user_id: string;
+              user_email: string;
+              user_name: string;
+              team_id: number | null;
+              role: string;
+              application_status?: "confirmed" | "pending";
+            }>;
+          };
+        };
+
+    const run = async () => {
+      // If the user is already on a team, load and lock the roster in the teammate UI.
+      if (loading || !user || !hasTeam || checkingSubmitted || alreadySubmitted) return;
+
+      const token = session?.access_token;
+      if (!token) return;
+
+      setTeamRosterLoading(true);
+      setTeamMessage(null);
+      try {
+        const res = await fetch("/api/team", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = (await res.json()) as TeamApiResponse;
+        if (!mounted) return;
+
+        if (!res.ok) {
+          setTeamMessage("Could not load your team. Please refresh.");
+          return;
+        }
+
+        const members = json.team?.members ?? [];
+        const others = members
+          .filter((m) => m.user_id !== user.id)
+          .map(
+            (m) =>
+              ({
+                id: m.user_id,
+                email: m.user_email ?? "",
+                full_name: (m.user_name ?? "").trim() || null,
+              }) satisfies DirectoryUser
+          )
+          .filter((m) => m.email);
+
+        setTeammates(others);
+        setSelectedTeammateUser(null);
+        setTeammateQuery("");
+      } catch {
+        if (!mounted) return;
+        setTeamMessage("Could not load your team. Please refresh.");
+      } finally {
+        if (mounted) setTeamRosterLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [alreadySubmitted, checkingSubmitted, hasTeam, loading, session?.access_token, user]);
+
+  useEffect(() => {
+    let mounted = true;
+
     const fetchAllUsers = async () => {
       setAvailableUsersLoading(true);
       setTeamMessage(null);
@@ -291,7 +429,7 @@ export default function ApplicationPage() {
       setAvailableUsersLoading(false);
     };
 
-    if (loading) return;
+    if (loading || checkingSubmitted || alreadySubmitted) return;
     if (!user) {
       setAvailableUsersLoading(false);
       return;
@@ -302,7 +440,122 @@ export default function ApplicationPage() {
     return () => {
       mounted = false;
     };
-  }, [loading, session?.access_token, user]);
+  }, [alreadySubmitted, checkingSubmitted, loading, session?.access_token, user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      if (loading) return;
+      if (!user) {
+        if (mounted) setCheckingSubmitted(false);
+        return;
+      }
+
+      const token = session?.access_token;
+      if (!token) {
+        if (mounted) setCheckingSubmitted(false);
+        return;
+      }
+
+      // If we already know it's submitted in this session, don't hit the DB.
+      const cacheKey = `migconf.application-submitted.v1:${user.id}`;
+      try {
+        const raw = sessionStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { submitted?: unknown } | boolean;
+          const cachedSubmitted =
+            typeof parsed === "boolean" ? parsed : typeof parsed?.submitted === "boolean" ? parsed.submitted : null;
+          if (cachedSubmitted === true) {
+            setAlreadySubmitted(true);
+            router.replace("/dashboard");
+            router.refresh();
+            return;
+          }
+        }
+      } catch {
+        // ignore cache read/parse errors
+      }
+
+      setCheckingSubmitted(true);
+      try {
+        const res = await fetch("/api/application-info", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = (await res.json()) as { submitted?: boolean; error?: string };
+        if (!mounted) return;
+
+        if (!res.ok) {
+          // Don't block the form forever if this check fails.
+          setCheckingSubmitted(false);
+          return;
+        }
+
+        if (json.submitted) {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({ submitted: true }));
+          } catch {
+            // ignore cache errors
+          }
+          setAlreadySubmitted(true);
+          router.replace("/dashboard");
+          router.refresh();
+          return;
+        }
+
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({ submitted: false }));
+        } catch {
+          // ignore cache errors
+        }
+        setAlreadySubmitted(false);
+      } finally {
+        if (mounted) setCheckingSubmitted(false);
+      }
+    };
+
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [loading, router, session?.access_token, user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      const token = session?.access_token;
+      if (!token || !user) return;
+
+      setHasTeamLoading(true);
+      try {
+        const res = await fetch("/api/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = (await res.json()) as { user?: { team_id?: number | null } };
+        if (!mounted) return;
+
+        if (!res.ok) {
+          setHasTeam(false);
+          return;
+        }
+
+        setHasTeam(Boolean(json.user?.team_id));
+      } catch {
+        if (!mounted) return;
+        setHasTeam(false);
+      } finally {
+        if (mounted) setHasTeamLoading(false);
+      }
+    };
+
+    if (loading || checkingSubmitted || alreadySubmitted) return;
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [alreadySubmitted, checkingSubmitted, loading, session?.access_token, user]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -326,10 +579,26 @@ export default function ApplicationPage() {
     );
   }
 
+  if (checkingSubmitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
+        <p className="text-lg font-semibold text-white/80">Checking application status...</p>
+      </div>
+    );
+  }
+
   if (availableUsersLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#032456]">
         <p className="text-lg font-semibold text-white/80">Loading application... please wait 5 seconds</p>
+      </div>
+    );
+  }
+
+  if (hasTeamLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
+        <p className="text-lg font-semibold text-white/80">Loading application... please wait</p>
       </div>
     );
   }
@@ -354,7 +623,11 @@ export default function ApplicationPage() {
         </header>
 
 
-        <form className="space-y-6 text-t-primary" onSubmit={handleSubmit}>
+        <form className="text-t-primary" onSubmit={handleSubmit} aria-busy={submitting}>
+          <fieldset
+            disabled={submitting}
+            className={`space-y-6 ${submitting ? "opacity-70" : ""}`}
+          >
           <div>
             <Label>Name</Label>
             <Input value={lockedName} disabled className="mt-2" aria-label="Applicant name" />
@@ -416,7 +689,22 @@ export default function ApplicationPage() {
 
           {/* Teammates */}
           <div className="rounded-2xl border border-white/10 bg-[#031c3f]/50 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/60">Teammates</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Teammates</p>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
+                onClick={() => setTeammateInfoOpen(true)}
+                aria-label="Teammate info"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </div>
+            {hasTeam ? (
+              <p className="mt-2 text-xs text-white/60">
+                You&apos;re already on a team. Your teammates are shown below and can&apos;t be edited here.
+              </p>
+            ) : null}
 
             <div className="mt-3 flex flex-wrap gap-2">
               {teammates.map((member) => (
@@ -425,27 +713,36 @@ export default function ApplicationPage() {
                   className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white"
                 >
                   <span>{member.full_name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setTeammates((prev) => prev.filter((t) => t.full_name !== member.full_name))}
-                    className="ml-1 text-white/60 hover:text-white"
-                    aria-label={`Remove teammate ${member.full_name}`}
-                  >
-                    ×
-                  </button>
+                  {!hasTeam ? (
+                    <button
+                      type="button"
+                      onClick={() => setTeammates((prev) => prev.filter((t) => t.full_name !== member.full_name))}
+                      className="ml-1 text-white/60 hover:text-white"
+                      aria-label={`Remove teammate ${member.full_name}`}
+                    >
+                      ×
+                    </button>
+                  ) : null}
                 </span>
               ))}
             </div>
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <div className="relative w-full">
-                <Combobox value={selectedTeammateUser} onChange={setSelectedTeammateUser} nullable immediate>
+                <Combobox
+                  value={selectedTeammateUser}
+                  onChange={setSelectedTeammateUser}
+                  nullable
+                  immediate
+                  disabled={hasTeam}
+                >
                   <div className="relative">
                     <Combobox.Input
                       className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm font-sans text-white/90 outline-hidden placeholder:text-white/60 focus:border-white/20 focus:ring-2 focus:ring-white/10"
-                      placeholder="Add people by name or email"
+                      placeholder={hasTeam ? "Team locked" : "Add people by name or email"}
                       displayValue={(u: AvailableUser | null) => u?.email ?? ""}
                       onChange={(e) => setTeammateQuery(e.target.value)}
+                      disabled={hasTeam}
                     />
                     <Combobox.Button className="absolute inset-y-0 right-0 flex items-center px-2 text-white/60 hover:text-white">
                       <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
@@ -512,12 +809,15 @@ export default function ApplicationPage() {
                 type="button"
                 className="w-full text-xs uppercase tracking-[0.4em] sm:w-auto"
                 onClick={handleAddTeammate}
-                disabled={!selectedTeammateUser}
+                disabled={hasTeam || !selectedTeammateUser}
               >
                 Add
               </Button>
             </div>
 
+            {teamRosterLoading ? (
+              <p className="mt-2 text-xs text-white/60">Loading your team…</p>
+            ) : null}
             {teamMessage && <p className="mt-2 text-xs text-accent">{teamMessage}</p>}
           </div>
 
@@ -582,13 +882,58 @@ export default function ApplicationPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <Button type="submit" className="uppercase tracking-[0.4em] hover:bg-primary/50">
-              Submit application
+            <Button
+              type="submit"
+              className="uppercase tracking-[0.4em] hover:bg-primary/50 disabled:cursor-not-allowed"
+              disabled={submitting}
+            >
+              {submitting ? "Submitting..." : "Submit application"}
             </Button>
           </div>
-
-          {message && <p className="text-sm text-accent">{message}</p>}
+          </fieldset>
         </form>
+
+        <MessageOverlay message={message} onClose={() => setMessage(null)} />
+
+        {/* Teammate info overlay */}
+        {teammateInfoOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setTeammateInfoOpen(false)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Teammates</p>
+                  <div className="space-y-2 text-sm text-white/90">
+                    <p>
+                      You can add up to <span className="font-semibold">3</span> teammates. Teams are set when you
+                      submit your application. The compeition is a team based event, so make sure all of your teammates are interested in the event and have submitted their applications.
+                      If you do not have a team, we will match you with a team after acceptance to the conference.
+                    </p>
+                    <p className="text-white/70">
+                      If you&apos;re already on a team, this section is locked and you can&apos;t add or remove people
+                      here. Please contact the conference staff if you have any questions or concerns.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-white/60 hover:text-white"
+                  onClick={() => setTeammateInfoOpen(false)}
+                  aria-label="Close teammate info"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
