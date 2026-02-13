@@ -11,7 +11,7 @@ const slides = [
     title: "MIG Quant Conference",
     description: "A high-signal day of quant games, workshops, and networking — built by MIG.",
     image: "/hero.jpg",
-    pill: "March 15, 2026",
+    pill: "March 20th, 2026",
   },
   {
     title: "World-Class Speakers",

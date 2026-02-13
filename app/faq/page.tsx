@@ -13,7 +13,7 @@ export default function FAQ() {
         <PageHeader 
           page="FAQ" 
           title="The Mig Quant Conference on" 
-          titleSecondary="March 15th 2026" 
+          titleSecondary="March 20th 2026" 
           subtitle="Applications for the 2026 conference are now open at the link above. Please contact mig.board@umich.edu with any questions." 
         />
       </div>

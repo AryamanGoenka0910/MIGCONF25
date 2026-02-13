@@ -56,7 +56,7 @@ export default function Home() {
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/30 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Application Deadline • March 1st, 2026
+                    Application Deadline • March 5st, 2026
                   </div>
                   <h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
                     Countdown to applications closing
@@ -64,7 +64,7 @@ export default function Home() {
                 </div>
 
                 <div className="w-full md:w-auto">
-                  <CountdownTimer targetDate="2026-03-01T00:00:00Z" />
+                  <CountdownTimer targetDate="2026-03-05T00:00:00Z" />
                   <div className="mt-6 flex justify-center md:justify-end">
                     <Button
                       size="xl"
