@@ -510,7 +510,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold">Competition Event</div>
-                    <div className="mt-1 text-sm text-muted-foreground">March 15, 2026</div>
+                    <div className="mt-1 text-sm text-muted-foreground">March 20th, 2026</div>
                     <a
                       href="https://maps.google.com/?q=Ann%20Arbor%2C%20MI"
                       target="_blank"
