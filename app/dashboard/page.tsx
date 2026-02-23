@@ -13,6 +13,8 @@ import {
   ExternalLink,
   ArrowRight,
   LogOut,
+  InfoIcon,
+  PlusIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserDisplayName } from "@/lib/utils";
@@ -63,6 +65,7 @@ export default function DashboardPage() {
   const [applicationStatusLoaded, setApplicationStatusLoaded] = useState(false);
   const [applicationButtonLoading, setApplicationButtonLoading] = useState(false);
 
+  
   const [userInfo, setUserInfo] = useState<UserResponse | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -71,11 +74,15 @@ export default function DashboardPage() {
   const [teamInfo, setTeamInfo] = useState<TeamResponse | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamLoading, setTeamLoading] = useState(false);
+  const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
 
+
+  // Redirect unauthenticated users to the sign-in page once session loading finishes.
   useEffect(() => {
     if (!loading && !user) router.replace("/signin");
   }, [loading, router, user]);
 
+  // Load and cache profile info for the current user.
   useEffect(() => {
     const token = session?.access_token;
     if (loading || !token || !user) return;
@@ -142,6 +149,7 @@ export default function DashboardPage() {
     return () => controller.abort();
   }, [loading, session?.access_token, user]);
 
+  // Resolve and cache application submission status to drive dashboard CTA state.
   useEffect(() => {
     const token = session?.access_token;
     if (loading || !token || !user) return;
@@ -208,6 +216,7 @@ export default function DashboardPage() {
     };
   }, [loading, session?.access_token, user]);
 
+  // Load and cache team details after profile data confirms a team association.
   useEffect(() => {
     const token = session?.access_token;
     const teamId = userInfo?.user?.team_id ?? null;
@@ -325,8 +334,7 @@ export default function DashboardPage() {
               </div>
 
               <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
-                {displayName}{" "}
-                <span className="text-muted-foreground">({userRole})</span>
+                {displayName}
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
@@ -351,7 +359,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                variant="default"
                 disabled={showApplicationLoading || isApplicationSubmitted || applicationButtonLoading}
                 onClick={() => {
                   if (showApplicationLoading || isApplicationSubmitted) return;
@@ -372,7 +380,6 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-border bg-background/30 hover:bg-background/45"
                 onClick={() => router.push("/")}
               >
                 View Schedule
@@ -380,9 +387,8 @@ export default function DashboardPage() {
 
               <Button
                 size="lg"
-                variant="secondary"
-                className="bg-card/50 hover:bg-card/70"
-                onClick={() => beginSignOut(router, { returnTo: "/signin" })}
+                variant="outline"
+                onClick={() => beginSignOut(router, { returnTo: "/" })}
               >
                 Sign out <LogOut className="ml-2 h-4 w-4" />
               </Button>
@@ -400,39 +406,43 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 animate-fade-in-up">
+          <div className="flex flex-row items-center justify-between gap-2">
+            <p>PLEASE READ: click the info button for team formation guidelines.</p>
+
+            <Button variant="outline" onClick={() => setTeammateInfoOpen?.(true)}>
+              <InfoIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>  
+          
         {/* Profile + Team */}
         <section className="mt-6 grid gap-6 md:grid-cols-2">
           {/* Profile */}
           <GlassCard
             title="Profile"
-            subtitle={
-              profileLoading ? "Loading profile…" : profileError ? profileError : undefined
-            }
           >
+            {profileLoading ? (
+              <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
+                Loading profile…
+              </div>
+            ) : profileError ? (
+              <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
+                {profileError}
+              </div>
+            ) : profileLoaded ? (
             <div className="space-y-3 text-sm">
               <Row k="Name" v={displayName} />
               <Row k="Email" v={userInfo?.user?.user_email ?? user?.email ?? "Unavailable"} />
               <Row k="Conference role" v={userRole} />
-              {/* Member since removed */}
             </div>
-
-            {/* <div className="mt-6 flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                className="border-border bg-background/30 hover:bg-background/45"
-                onClick={() => router.push("/signup")}
-              >
-                Update profile
-              </Button>
-            </div> */}
+            ) : null}
           </GlassCard>
 
           {/* Team */}
           <GlassCard
             title="Team"
-            subtitle={
-              !profileLoaded ? "Loading team…" : teamLoading ? "Loading team…" : teamError ? teamError : undefined
-            }
+            teamAdd={true}
           >
             {!profileLoaded || teamLoading ? (
               <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
@@ -443,9 +453,9 @@ export default function DashboardPage() {
                 {teamError}
               </div>
             ) : teamMembers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-background/20 p-6 text-sm text-muted-foreground">
-                No team yet.
-              </div>
+                <div className="rounded-2xl border border-dashed border-border bg-background/20 p-6 text-sm text-muted-foreground">
+                  No team yet. Please click the info button for team formation guidelines. And Submit your application for to create a team.
+                </div>
             ) : (
               <div className="grid gap-3">
                 {teamMembers.map((m) => (
@@ -485,7 +495,7 @@ export default function DashboardPage() {
         {/* Important Dates + Contact & Support */}
         <section className="mt-6 grid gap-6 md:grid-cols-2">
           {/* Important Dates */}
-          <GlassCard title="Important Dates" subtitle={undefined}>
+          <GlassCard title="Important Dates">
             <div className="mt-5 space-y-4">
               <div className="rounded-2xl border border-border bg-background/25 p-5">
                 <div className="flex items-start gap-3">
@@ -526,7 +536,7 @@ export default function DashboardPage() {
           </GlassCard>
 
           {/* Contact & Support */}
-          <GlassCard title="Contact & Support" subtitle={undefined}>
+          <GlassCard title="Contact & Support">
             <div className="mt-5 space-y-4">
               <div className="flex items-start gap-3 rounded-2xl border border-border bg-background/25 p-4">
                 <Mail className="mt-0.5 h-5 w-5 text-primary" />
@@ -536,7 +546,7 @@ export default function DashboardPage() {
                     href="mailto:mig.board@umich.edu"
                     className="text-sm text-muted-foreground underline underline-offset-4"
                   >
-                    mig.board@umich.edu
+                    mig.quant.board@umich.edu
                   </a>
                 </div>
               </div>
@@ -570,6 +580,73 @@ export default function DashboardPage() {
             </div>
           </GlassCard>
         </section>
+
+        {teammateInfoOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setTeammateInfoOpen(false)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Teammates</p>
+                  <div className="space-y-2 text-sm text-white/90">
+                    <h4 className="pt-1 text-sm font-semibold text-white">
+                      Team Formation for the MIG Quant Conference
+                    </h4>
+                    <p>
+                      The MIG Quant Conference is a team-based event. Teams may consist of up to 4 members total
+                      (you + up to 3 teammates).
+                    </p>
+                    <p>There are two ways to form a team:</p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="font-semibold text-white">Scenario 1: Everyone Applies Individually First</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                          <li>Each team member submits their application separately.</li>
+                          <li>
+                            After all members have submitted, you may create a team in the dashboard team section and add
+                            your teammates.
+                          </li>
+                          <li>
+                            All team members must have already submitted their individual applications before forming
+                            the team.
+                          </li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">
+                          Scenario 2: One Person Creates the Team During Application
+                        </p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                          <li>One team member submits their application and creates a team at that time.</li>
+                          <li>They may add up to 3 teammates who have not yet submitted their applications.</li>
+                          <li>
+                            The invited teammates must then submit their applications and their team should be visible in the application portal.
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+  
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-white/60 hover:text-white"
+                  onClick={() => setTeammateInfoOpen(false)}
+                  aria-label="Close teammate info"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -577,12 +654,12 @@ export default function DashboardPage() {
 
 function GlassCard({
   title,
-  subtitle,
   children,
+  teamAdd = false,
 }: {
   title: string;
-  subtitle?: string;
   children: React.ReactNode;
+  teamAdd?: boolean;
 }) {
   return (
     <div className="group relative overflow-hidden rounded-3xl border border-border bg-card/40 p-6 backdrop-blur animate-fade-in-up opacity-0">
@@ -601,9 +678,13 @@ function GlassCard({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{title}</div>
-            {subtitle ? <div className="mt-2 text-xs text-muted-foreground">{subtitle}</div> : null}
           </div>
-        </div>
+          {/* {teamAdd && (
+            <Button variant="outline">
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          )} */}
+        </div>  
 
         <div className="mt-5">{children}</div>
       </div>
