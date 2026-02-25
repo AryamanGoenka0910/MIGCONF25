@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const user = userRow as unknown as User;
 
   return NextResponse.json(
-    { user: user, },
+    user,
     { status: 200, headers: { "Cache-Control": "no-store" } }
   );
 }

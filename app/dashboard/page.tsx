@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+//TODO FIX ABORT CONTROLLERs
+//TODO FIX TYPES
+
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 import {
@@ -15,17 +18,18 @@ import {
   LogOut,
   InfoIcon,
   PlusIcon,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserDisplayName } from "@/lib/utils";
 import BackgroundGlow from "@/components/background-glow";
 import { beginSignOut } from "@/lib/signout";
+import { Combobox } from "@headlessui/react";
+import { AvailableUser } from "@/lib/types";
+import { fetchAllUsers } from "@/lib/fetch-all-users";
+import type { InviteUserRow, Invite, User } from "@/lib/types";
 
 type ApplicationStatus = "not_started" | "submitted";
-
-type UserResponse = {
-  user: { user_id: string; user_email: string; user_name: string; team_id: number | null; role: string };
-};
 
 type TeamResponse = {
   team:
@@ -37,7 +41,7 @@ type TeamResponse = {
           user_email: string;
           user_name: string;
           team_id: number | null;
-          application_status: "confirmed" | "pending";
+          status: "confirmed" | "pending_application" | "pending_invite";
         }[];
       };
 };
@@ -60,22 +64,114 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading, session } = useSession();
 
+  const [reloadKey, setReloadKey] = useState<number>(0);
+
+  // User Application Info
   const [applicationStatus, setApplicationStatus] = useState<ApplicationStatus>("not_started");
   const [applicationStatusLoading, setApplicationStatusLoading] = useState(false);
-  const [applicationStatusLoaded, setApplicationStatusLoaded] = useState(false);
   const [applicationButtonLoading, setApplicationButtonLoading] = useState(false);
 
-  
-  const [userInfo, setUserInfo] = useState<UserResponse | null>(null);
+  // Profile Info
+  const [userInfo, setUserInfo] = useState<User | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [profileLoaded, setProfileLoaded] = useState(false);
 
+  // Team Info
   const [teamInfo, setTeamInfo] = useState<TeamResponse | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamLoading, setTeamLoading] = useState(false);
-  const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
 
+  // Invites Info
+  const [sentInvites, setSentInvites] = useState<Invite[]>([]);
+  const [receivedInvites, setReceivedInvites] = useState<Invite[]>([]);
+  const [invitesLoading, setInvitesLoading] = useState(false);
+
+  // Section Toggles
+  const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
+  const [teamAddSection, setTeamAddSection] = useState(false);
+
+  /////ADDING TEAM MEMBERS\\\\\\
+
+  // Selecting Teammates
+  const [teammateQuery, setTeammateQuery] = useState("");  
+  const [selectedTeammateUser, setSelectedTeammateUser] = useState<AvailableUser | null>(null);
+
+  // Available Users
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
+  const [availableUsersLoading, setAvailableUsersLoading] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      setAvailableUsersLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetchAllUsers({
+      token: session?.access_token,
+      currentUserId: user.id,
+      setUsers: setAvailableUsers,
+      setLoading: setAvailableUsersLoading,
+      signal: controller.signal,
+      includeTeamed: "true",
+    });
+
+    return () => controller.abort();
+  }, [loading, session?.access_token, user]);
+
+  const filteredUsers = useMemo(() => {
+    const q = teammateQuery.trim().toLowerCase();
+    if (!q) return availableUsers;
+
+    return availableUsers.filter((u) => {
+      const name = (u.full_name ?? "").toLowerCase();
+      const email = u.email.toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [availableUsers, teammateQuery]);
+
+  const inviteTeammate = async () => {
+    const token = session?.access_token;
+    if (!token) return;
+    if (!selectedTeammateUser?.id || !teamInfo?.team?.team_id) return;
+    
+    console.log("Inviting teammate", selectedTeammateUser.id, teamInfo.team.team_id);
+    const res = await fetch("/api/invite_routes/send_team_invite", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ to_user_id: selectedTeammateUser.id, team_id: teamInfo.team.team_id }),
+    });
+
+    if (!res.ok) {
+      console.error(await res.json());
+      return;
+    }
+  };
+
+  const rejectInvite = async (inviteId: string) => {
+    const token = session?.access_token;
+    if (!token) return;
+    if (!inviteId) return;
+
+    console.log("Rejecting invite", inviteId);
+    const res = await fetch("/api/invite_routes/reject_invite", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ invite_id: inviteId }),
+    });
+
+    if (!res.ok) {
+      console.error(await res.json());
+      return;
+    }
+  };
+
+  /////\\\\\\
 
   // Redirect unauthenticated users to the sign-in page once session loading finishes.
   useEffect(() => {
@@ -85,7 +181,12 @@ export default function DashboardPage() {
   // Load and cache profile info for the current user.
   useEffect(() => {
     const token = session?.access_token;
-    if (loading || !token || !user) return;
+    if (loading || !token || !user) {
+      setUserInfo(null);
+      setProfileError(null);
+      setProfileLoading(false);
+      return;
+    }
 
     // Cache user info for the duration of the browser session.
     // This avoids refetching /api/user on every Dashboard visit in the same session.
@@ -93,12 +194,11 @@ export default function DashboardPage() {
     try {
       const cachedRaw = sessionStorage.getItem(cacheKey);
       if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw) as UserResponse | null;
-        if (cached?.user?.user_id === user.id) {
+        const cached = JSON.parse(cachedRaw) as User | null;
+        if (cached?.user_id === user.id) {
           setUserInfo(cached);
           setProfileError(null);
           setProfileLoading(false);
-          setProfileLoaded(true);
           return;
         }
       }
@@ -107,28 +207,28 @@ export default function DashboardPage() {
     }
 
     const controller = new AbortController();
-
     const run = async () => {
-      setProfileLoading(true);
       setProfileError(null);
-      setProfileLoaded(false);
+      setProfileLoading(true);
 
       try {
         const userRes = await fetch("/api/user", {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
-        const userJson = (await userRes.json()) as Partial<UserResponse> & { error?: string };
+        
+        const userJson = (await userRes.json()) as Partial<User> & { error?: string };
 
         if (!userRes.ok) {
           setUserInfo(null);
+          setProfileLoading(false);
           setProfileError(userJson.error ?? "Failed to load profile.");
           return;
         }
 
-        setUserInfo(userJson as UserResponse);
+        setUserInfo(userJson as User);
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(userJson as UserResponse));
+          sessionStorage.setItem(cacheKey, JSON.stringify(userJson as User));
         } catch {
           // Ignore cache write errors (quota, privacy mode, etc).
         }
@@ -140,7 +240,6 @@ export default function DashboardPage() {
       } finally {
         if (!controller.signal.aborted) {
           setProfileLoading(false);
-          setProfileLoaded(true);
         }
       }
     };
@@ -152,16 +251,22 @@ export default function DashboardPage() {
   // Resolve and cache application submission status to drive dashboard CTA state.
   useEffect(() => {
     const token = session?.access_token;
-    if (loading || !token || !user) return;
+    if (loading || !token || !user) {
+      setApplicationStatus("not_started");
+      setApplicationStatusLoading(false);
+      return;
+    };
 
     const cacheKey = `migconf.application-submitted.v1:${user.id}`;
     const cachedSubmitted = (() => {
       try {
-        const raw = sessionStorage.getItem(cacheKey);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as { submitted?: unknown } | boolean;
-        if (typeof parsed === "boolean") return parsed;
-        return typeof parsed?.submitted === "boolean" ? parsed.submitted : null;
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw){
+          const cached = JSON.parse(cachedRaw) as { submitted?: unknown } | boolean;
+          if (typeof cached === "boolean") return cached;
+          return typeof cached?.submitted === "boolean" ? cached.submitted : null;
+        } 
+        return null;
       } catch {
         return null;
       }
@@ -170,10 +275,8 @@ export default function DashboardPage() {
     // Set initial UI from cache.
     if (cachedSubmitted !== null) {
       setApplicationStatus(cachedSubmitted ? "submitted" : "not_started");
-      setApplicationStatusLoaded(true);
       setApplicationStatusLoading(false);
     } else {
-      setApplicationStatusLoaded(false);
       setApplicationStatusLoading(true);
     }
 
@@ -183,29 +286,34 @@ export default function DashboardPage() {
     const controller = new AbortController();
     const run = async () => {
       try {
-        const res = await fetch("/api/application-info", {
+        const appRes = await fetch("/api/application-info", {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
-        const json = (await res.json()) as { submitted?: boolean; error?: string };
-
-        const submitted = !!json.submitted;
-        if (!res.ok) throw new Error(json.error ?? "Failed to load application status.");
+        
+        const appJson = (await appRes.json()) as { submitted?: boolean; error?: string };
+        const submitted = !!appJson.submitted;
+        
+        if (!appRes.ok) {
+          setApplicationStatus("not_started");
+          setApplicationStatusLoading(false);
+          return;
+        }
 
         setApplicationStatus(submitted ? "submitted" : "not_started");
-        setApplicationStatusLoaded(true);
 
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify({ submitted }));
         } catch {
           // Ignore cache write errors.
         }
+
       } catch {
         if (controller.signal.aborted) return;
-        // If we had no cached value, just stop showing the spinner and fall back to default UI.
-        if (cachedSubmitted === null) setApplicationStatusLoaded(true);
       } finally {
-        if (!controller.signal.aborted) setApplicationStatusLoading(false);
+        if (!controller.signal.aborted) {
+          setApplicationStatusLoading(false);
+        }
       }
     };
 
@@ -219,9 +327,13 @@ export default function DashboardPage() {
   // Load and cache team details after profile data confirms a team association.
   useEffect(() => {
     const token = session?.access_token;
-    const teamId = userInfo?.user?.team_id ?? null;
-    if (loading || !token || !user) return;
-    if (!profileLoaded) return;
+    const teamId = userInfo?.team_id ?? null;
+    if (loading || !token || !user || profileLoading) {
+      setTeamInfo({ team: null });
+      setTeamError(null);
+      setTeamLoading(false);
+      return;
+    }
 
     // Team is non-blocking; only fetch if we know the user has a team.
     if (teamId === null) {
@@ -251,8 +363,9 @@ export default function DashboardPage() {
 
     const controller = new AbortController();
     const run = async () => {
-      setTeamLoading(true);
       setTeamError(null);
+      setTeamLoading(true);
+
 
       try {
         const teamRes = await fetch("/api/team", {
@@ -264,6 +377,7 @@ export default function DashboardPage() {
         if (!teamRes.ok) {
           setTeamInfo({ team: null });
           setTeamError(teamJson.error ?? "Failed to load team.");
+          setTeamLoading(false);
           return;
         }
 
@@ -280,7 +394,9 @@ export default function DashboardPage() {
         setTeamInfo({ team: null });
         setTeamError("Failed to load team.");
       } finally {
-        if (!controller.signal.aborted) setTeamLoading(false);
+        if (!controller.signal.aborted) {
+          setTeamLoading(false);
+        }
       }
     };
 
@@ -290,7 +406,65 @@ export default function DashboardPage() {
       clearTimeout(t);
       controller.abort();
     };
-  }, [loading, profileLoaded, session?.access_token, user, userInfo?.user?.team_id]);
+  }, [loading, profileLoading, session?.access_token, user, userInfo?.team_id]);
+
+
+  useEffect(() => {
+    const token = session?.access_token;
+    if (loading || !token || !user) {
+      setSentInvites([]);
+      setReceivedInvites([]);
+      setInvitesLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const run = async () => {
+      setInvitesLoading(true);
+      try {
+        const res = await fetch("/api/invite_routes/get_invites", {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+
+        const json = (await res.json()) as Partial<{
+          sent_invites: Invite[];
+          received_invites: Invite[];
+          error?: string;
+        }>;
+
+        if (!res.ok) {
+          console.error("Failed to load invites", json.error ?? json);
+          setSentInvites([]);
+          setReceivedInvites([]);
+          setInvitesLoading(false);
+          return;
+        }
+
+        const nextSent = Array.isArray(json.sent_invites) ? json.sent_invites : [];
+        const nextReceived = Array.isArray(json.received_invites) ? json.received_invites : [];
+
+        setSentInvites(nextSent);
+        setReceivedInvites(nextReceived);
+
+        console.log("Invites set", { sent: nextSent.length, received: nextReceived.length });
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        console.error("Failed to load invites", e);
+        setSentInvites([]);
+        setReceivedInvites([]);
+        setInvitesLoading(false);
+      } finally {
+        if (!controller.signal.aborted) {
+          setInvitesLoading(false);
+        }
+      }
+    };
+
+    void run();
+    return () => controller.abort();
+  }, [loading, session?.access_token, user, reloadKey]);
+
 
   if (loading) {
     return (
@@ -306,17 +480,16 @@ export default function DashboardPage() {
   }
 
   const displayNameFromAuth = getUserDisplayName(user);
-  const displayName = userInfo?.user?.user_name ?? displayNameFromAuth;
+  const displayName = userInfo?.user_name ?? displayNameFromAuth;
   const teamMembers = teamInfo?.team?.members ?? [];
-  const userRole = userInfo?.user?.role ?? "Attendee";
+  const userRole = userInfo?.role ?? "Attendee";
 
-  const showApplicationLoading = applicationStatusLoading && !applicationStatusLoaded;
   const isApplicationSubmitted = applicationStatus === "submitted";
 
   const quickStats = [
     { label: "Role", value: userRole },
-    { label: "Application", value: showApplicationLoading ? "…" : statusLabels[applicationStatus] },
-    { label: "Team members", value: !profileLoaded || teamLoading ? "…" : `${teamMembers.length}` },
+    { label: "Application", value: applicationStatusLoading ? "…" : statusLabels[applicationStatus] },
+    { label: "Team members", value: profileLoading || teamLoading ? "…" : `${teamMembers.length}` },
   ];
 
   return (
@@ -345,13 +518,13 @@ export default function DashboardPage() {
                 <span
                   className={cn(
                     "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
-                    showApplicationLoading
+                    applicationStatusLoading
                       ? "border-border bg-background/30 text-muted-foreground"
                       : statusStyles[applicationStatus]
                   )}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-                  {showApplicationLoading ? "Checking application…" : statusLabels[applicationStatus]}
+                  {applicationStatusLoading ? "Checking application…" : statusLabels[applicationStatus]}
                 </span>
               </div>
             </div>
@@ -360,21 +533,21 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="default"
-                disabled={showApplicationLoading || isApplicationSubmitted || applicationButtonLoading}
+                disabled={applicationStatusLoading || isApplicationSubmitted || applicationButtonLoading}
                 onClick={() => {
-                  if (showApplicationLoading || isApplicationSubmitted) return;
+                  if (applicationStatusLoading || isApplicationSubmitted) return;
                   setApplicationButtonLoading(true);
                   router.push("/application");
                 }}
               >
-                {showApplicationLoading
+                {applicationStatusLoading
                   ? "Checking…"
                   : isApplicationSubmitted
                     ? "Application Submitted"
                     : applicationButtonLoading
                       ? "Opening…"
                       : "Start Application"}
-                {showApplicationLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />}
+                {applicationStatusLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
 
               <Button
@@ -409,12 +582,99 @@ export default function DashboardPage() {
         <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 animate-fade-in-up">
           <div className="flex flex-row items-center justify-between gap-2">
             <p>PLEASE READ: click the info button for team formation guidelines.</p>
-
             <Button variant="outline" onClick={() => setTeammateInfoOpen?.(true)}>
               <InfoIcon className="h-4 w-4" />
             </Button>
           </div>
-        </div>  
+        </div>
+
+        {/* Invites */}
+        {receivedInvites.length > 0 || sentInvites.length > 0 ? (
+          <section className="mt-6">
+            <GlassCard title="Team Invites">
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {/* Incoming */}
+                <div className="rounded-2xl border border-border bg-background/25 p-4">
+                  <div className="flex items-center justify-between gap-3 mb-5">
+                    <div className="text-sm font-semibold">Incoming invites</div>
+                    <div className="text-xs text-muted-foreground">Invites sent to you</div>
+                  </div>
+
+                  {receivedInvites.length === 0 ? (
+                    <div className="mt-3 rounded-xl border border-dashed border-border bg-background/20 p-4 text-sm text-muted-foreground">
+                      No incoming invites.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {receivedInvites.map((i) => (
+                        <TeamRow id={i.from_user_id}>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold">
+                                {i.from_user?.user_name ?? ""}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {i.from_user?.user_email ?? ""}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="default">
+                                Accept
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={async () => {
+                                await rejectInvite(i.invite_id);
+                                setReloadKey(reloadKey + 1);
+                              }}>
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        </TeamRow>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              {/* Outgoing */}
+              <div className="rounded-2xl border border-border bg-background/25 p-4">
+                <div className="flex items-center justify-between gap-3 mb-5">
+                  <div className="text-sm font-semibold">Outgoing invites</div>
+                  <div className="text-xs text-muted-foreground">Invites you sent</div>
+                </div>
+
+                {sentInvites.length === 0 ? (
+                  <div className="mt-3 rounded-xl border border-dashed border-border bg-background/20 p-4 text-sm text-muted-foreground">
+                    No outgoing invites.
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {sentInvites.map((i) => (
+                      <TeamRow id={i.to_user_id}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold">
+                              {i.to_user?.user_name ?? i.to_user_id}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {i.to_user?.user_email ?? ""}
+                            </div>
+                          </div>
+
+                          <Button size="sm" variant="outline">
+                              Cancel
+                          </Button>
+                        </div>
+                      </TeamRow>
+                    ))}
+                  </div>
+                )}      
+              </div>
+            </div>
+          </GlassCard>
+        </section>
+        ) : (
+        null  
+      )}
           
         {/* Profile + Team */}
         <section className="mt-6 grid gap-6 md:grid-cols-2">
@@ -430,10 +690,10 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
                 {profileError}
               </div>
-            ) : profileLoaded ? (
+            ) : !profileLoading ? (
             <div className="space-y-3 text-sm">
               <Row k="Name" v={displayName} />
-              <Row k="Email" v={userInfo?.user?.user_email ?? user?.email ?? "Unavailable"} />
+              <Row k="Email" v={userInfo?.user_email ?? user?.email ?? "Unavailable"} />
               <Row k="Conference role" v={userRole} />
             </div>
             ) : null}
@@ -443,8 +703,9 @@ export default function DashboardPage() {
           <GlassCard
             title="Team"
             teamAdd={true}
+            setTeamAddSection={setTeamAddSection}
           >
-            {!profileLoaded || teamLoading ? (
+            {profileLoading || teamLoading ? (
               <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
                 Loading team…
               </div>
@@ -459,33 +720,26 @@ export default function DashboardPage() {
             ) : (
               <div className="grid gap-3">
                 {teamMembers.map((m) => (
-                  <div
-                    key={m.user_id}
-                    className="group relative overflow-hidden rounded-2xl border border-border bg-background/25 p-4 transition-transform duration-300 hover:-translate-y-0.5"
-                  >
-                    {/* shine sweep */}
-                    <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      <div className="absolute -left-1/3 top-0 h-full w-1/2 rotate-12 bg-linear-to-r from-transparent via-foreground/10 to-transparent blur-md" />
-                    </div>
-
+                  <TeamRow id={m.user_id}>
+                   
                     <div className="relative flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold">{m.user_name}</div>
+                        <div className="truncate text-sm font-semibold">{m.user_name}{m.user_id === user?.id ? " (You)" : ""}</div>
                         <div className="truncate text-xs text-muted-foreground">{m.user_email}</div>
                       </div>
 
                       <span
                         className={cn(
                           "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium",
-                          m.application_status === "confirmed"
+                          m.status === "confirmed"
                             ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-100"
                             : "border-amber-400/20 bg-amber-400/10 text-amber-100"
                         )}
                       >
-                        {m.application_status === "confirmed" ? "Confirmed" : "Pending"}
+                        {m.status === "confirmed" ? "Confirmed" : "Pending Application"}
                       </span>
                     </div>
-                  </div>
+                  </TeamRow>
                 ))}
               </div>
             )}
@@ -647,6 +901,144 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {teamAddSection && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setTeamAddSection(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add teammate"
+          >
+            <div
+              className="w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Team</p>
+                  <h3 className="mt-2 text-lg font-semibold">Add Teammates</h3>
+                  <p className="mt-1 text-sm text-white/70">
+                    Search by name or email, then choose a teammate from the dropdown.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-white/60 hover:text-white"
+                  onClick={() => setTeamAddSection(false)}
+                  aria-label="Close add teammate popup"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-5">
+                <Combobox
+                  value={selectedTeammateUser}
+                  onChange={setSelectedTeammateUser}
+                  nullable
+                  immediate
+                >
+                  <div className="relative">
+                    <Combobox.Input
+                      className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm font-sans text-white/90 outline-hidden placeholder:text-white/60 focus:border-white/20 focus:ring-2 focus:ring-white/10"
+                      placeholder="Add people by name or email"
+                      displayValue={(u: AvailableUser | null) => u?.email ?? ""}
+                      onChange={(e) => setTeammateQuery(e.target.value)}
+                    />
+                    <Combobox.Button className="absolute inset-y-0 right-0 flex items-center px-2 text-white/60 hover:text-white">
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </Combobox.Button>
+                  </div>
+
+                  <Combobox.Options className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-white/10 bg-[#020617] py-1 shadow-2xl backdrop-blur-sm">
+                    {filteredUsers.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-white/50">No matches</div>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <Combobox.Option
+                          key={u.id}
+                          value={u}
+                          className={({ active }) =>
+                            `cursor-pointer px-3 py-2 font-sans ${
+                              active ? "bg-white/10 text-white" : "bg-transparent text-white/90"
+                            }`
+                          }
+                        >
+                          {({ selected }) => (
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 overflow-hidden rounded-full bg-white/10">
+                                {u.avatar_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={u.avatar_url} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-xs text-white/70">
+                                    {(u.full_name?.[0] ?? u.email[0]).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-medium text-white">
+                                  {u.full_name ?? u.email}
+                                </div>
+                                {u.full_name ? (
+                                  <div className="truncate text-xs text-white/50">{u.email}</div>
+                                ) : null}
+                              </div>
+
+                              {selected ? (
+                                <span className="ml-auto text-[10px] uppercase tracking-[0.3em] text-white/60">
+                                  Selected
+                                </span>
+                              ) : null}
+                            </div>
+                          )}
+                        </Combobox.Option>
+                      ))
+                    )}
+                  </Combobox.Options>
+                </Combobox>
+              </div>
+
+              {selectedTeammateUser ? (
+                <div className="mt-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-xs text-white/80">
+                  Selected: {selectedTeammateUser.full_name ?? selectedTeammateUser.email}
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedTeammateUser(null);
+                    setTeammateQuery("");
+                    setTeamAddSection(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  disabled={!selectedTeammateUser}
+                  onClick={() => {
+                    setTeamAddSection(false);
+                    inviteTeammate();
+                    setReloadKey(reloadKey + 1);
+                  }}
+                >
+                  Add teammate
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -656,10 +1048,12 @@ function GlassCard({
   title,
   children,
   teamAdd = false,
+  setTeamAddSection,
 }: {
   title: string;
   children: React.ReactNode;
   teamAdd?: boolean;
+  setTeamAddSection?: (open: boolean) => void;
 }) {
   return (
     <div className="group relative overflow-hidden rounded-3xl border border-border bg-card/40 p-6 backdrop-blur animate-fade-in-up opacity-0">
@@ -679,11 +1073,11 @@ function GlassCard({
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{title}</div>
           </div>
-          {/* {teamAdd && (
-            <Button variant="outline">
+          {teamAdd && (
+            <Button variant="outline" onClick={() => setTeamAddSection?.(true)}>
               <PlusIcon className="h-4 w-4" />
             </Button>
-          )} */}
+          )}
         </div>  
 
         <div className="mt-5">{children}</div>
@@ -699,4 +1093,19 @@ function Row({ k, v }: { k: string; v: string }) {
       <div className="text-sm font-semibold">{v}</div>
     </div>
   );
+}
+
+function TeamRow({id, children} : {id: string, children: React.ReactNode}){
+  return (
+    <div
+      key={id}
+      className="group relative overflow-hidden rounded-2xl border border-border bg-background/25 p-4 transition-transform duration-300 hover:-translate-y-0.5"
+    >
+      {/* shine sweep */}
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div className="absolute -left-1/3 top-0 h-full w-1/2 rotate-12 bg-linear-to-r from-transparent via-foreground/10 to-transparent blur-md" />
+      </div>
+      {children}
+    </div>
+  )
 }

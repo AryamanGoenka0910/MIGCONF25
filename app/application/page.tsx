@@ -16,6 +16,7 @@ import { Info } from "lucide-react";
 import MessageOverlay from "@/components/MessageOverlay";
 
 import { getUserDisplayName } from "@/lib/utils";
+import { fetchAllUsers } from "@/lib/fetch-all-users";
 
 const schools = [
   "University of Michigan",
@@ -395,51 +396,24 @@ export default function ApplicationPage() {
     };
   }, [alreadySubmitted, checkingSubmitted, hasTeam, loading, session?.access_token, user]);
 
+  // Get all available users for the teammate selection
   useEffect(() => {
-    let mounted = true;
-
-    const fetchAllUsers = async () => {
-      setAvailableUsersLoading(true);
-      setTeamMessage(null);
-
-      const token = session?.access_token;
-      if (!token) {
-        if (mounted) setTeamMessage("Could not load user directory (missing session token).");
-        if (mounted) setAvailableUsersLoading(false);
-        return;
-      }
-
-      const res = await fetch("/api/user-directory", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        if (mounted) setTeamMessage("Could not load user directory. Please refresh.");
-        if (mounted) setAvailableUsersLoading(false);
-        return;
-      }
-
-      const json = (await res.json()) as { users?: AvailableUser[] };
-      const allUsers = Array.isArray(json.users) ? json.users : [];
-
-      if (!mounted) return;
-
-      const myId = user?.id;
-      setAvailableUsers(myId ? allUsers.filter((u) => u.id !== myId) : allUsers);
-      setAvailableUsersLoading(false);
-    };
-
     if (loading || checkingSubmitted || alreadySubmitted) return;
     if (!user) {
       setAvailableUsersLoading(false);
       return;
     }
 
-    fetchAllUsers();
-
-    return () => {
-      mounted = false;
-    };
+    const controller = new AbortController();
+    void fetchAllUsers({
+      token: session?.access_token,
+      currentUserId: user.id,
+      setUsers: setAvailableUsers,
+      setLoading: setAvailableUsersLoading,
+      signal: controller.signal,
+    });
+  
+    return () => controller.abort();
   }, [alreadySubmitted, checkingSubmitted, loading, session?.access_token, user]);
 
   useEffect(() => {
@@ -532,7 +506,7 @@ export default function ApplicationPage() {
         const res = await fetch("/api/user", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const json = (await res.json()) as { user?: { team_id?: number | null } };
+        const json = (await res.json()) as { team_id?: number | null };
         if (!mounted) return;
 
         if (!res.ok) {
@@ -540,7 +514,7 @@ export default function ApplicationPage() {
           return;
         }
 
-        setHasTeam(Boolean(json.user?.team_id));
+        setHasTeam(Boolean(json.team_id));
       } catch {
         if (!mounted) return;
         setHasTeam(false);

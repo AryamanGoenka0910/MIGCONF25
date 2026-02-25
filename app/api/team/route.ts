@@ -6,7 +6,7 @@ import type { User } from "@/lib/types";
 export const runtime = "nodejs";
 
 type MemberApplicationStatus = "confirmed" | "pending";
-type TeamMember = User & { application_status: MemberApplicationStatus };
+type TeamMember = User & { status: MemberApplicationStatus };
 
 export async function GET(request: Request) {
   const auth = await requireAuthUser(request);
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
   const membersWithStatus: TeamMember[] = members.map((m) => {
     return {
       ...m,
-      application_status: submittedUserIds.has(m.user_id) ? "confirmed" : "pending",
+      status: submittedUserIds.has(m.user_id) ? "confirmed" : "pending",
     };
   });
 

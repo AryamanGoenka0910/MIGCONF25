@@ -19,4 +19,25 @@ type User = {
   role: string;
 };
 
-export type { DirectoryUser, AvailableUser, Application, User };
+type InviteUserRow = {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  team_id: number;
+  role: string;
+};
+
+type Invite = {
+  invite_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  team_id: number;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+  updated_at: string | null;
+  to_user?: InviteUserRow | null;
+  from_user?: InviteUserRow | null;
+};
+
+
+export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite };
