@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
@@ -8,15 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { Combobox } from "@headlessui/react";
 import CreatableSelect from "react-select/creatable";
 import type { StylesConfig } from "react-select";
-import type { DirectoryUser, AvailableUser } from "@/lib/types";
-import { Info } from "lucide-react";
 import MessageOverlay from "@/components/MessageOverlay";
 
 import { getUserDisplayName } from "@/lib/utils";
-import { fetchAllUsers } from "@/lib/fetch-all-users";
 
 const schools = [
   "University of Michigan",
@@ -135,47 +131,22 @@ export default function ApplicationPage() {
   const lockedName = getUserDisplayName(user);
 
   const [checkingSubmitted, setCheckingSubmitted] = useState(true);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-
-  const [hasTeam, setHasTeam] = useState(false);
-  const [hasTeamLoading, setHasTeamLoading] = useState(false);
-  const [teamRosterLoading, setTeamRosterLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
+  // Application Fields
   const [school, setSchool] = useState("");
   const [gradYear, setGradYear] = useState(gradYears[0]);
-  const [major, setMajor] = useState<string | null>(null);
-  const [resume, setResume] = useState<File | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [major, setMajor] = useState("");
   const [howHeard, setHowHeard] = useState("");
   const [yesNoAnswers, setYesNoAnswers] = useState<Record<string, "yes" | "no">>({
     questionOne: "yes",
     questionTwo: "yes",
   });
+  const [resume, setResume] = useState<File | null>(null);
 
-  const [dragActive, setDragActive] = useState(false);
-
-  const [teammates, setTeammates] = useState<DirectoryUser[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
-  const [availableUsersLoading, setAvailableUsersLoading] = useState(false);
-
-  const [teammateQuery, setTeammateQuery] = useState("");
-  const [selectedTeammateUser, setSelectedTeammateUser] = useState<AvailableUser | null>(null);
-
-  const [teamMessage, setTeamMessage] = useState<string | null>(null);
-  const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
-
-  const filteredUsers = useMemo(() => {
-    const q = teammateQuery.trim().toLowerCase();
-    if (!q) return availableUsers;
-
-    return availableUsers.filter((u) => {
-      const name = (u.full_name ?? "").toLowerCase();
-      const email = u.email.toLowerCase();
-      return name.includes(q) || email.includes(q);
-    });
-  }, [availableUsers, teammateQuery]);
-
+  /// RESUME FUNCTIONS
   const handleResumeFiles = (files: FileList | null) => {
     if (!files || files.length === 0) {
       setResume(null);
@@ -199,6 +170,22 @@ export default function ApplicationPage() {
     setResume(file);
   };
 
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    handleResumeFiles(event.dataTransfer.files);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragActive(false);
+  };
+
+  // SUBMIT FUNCTION
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting) return;
@@ -229,16 +216,14 @@ export default function ApplicationPage() {
       try {
         const form = new FormData();
         form.set("school", school);
-        form.set("major", major ?? "");
+        form.set("major", major);
         form.set("grad_year", gradYear);
         form.set("how_did_you_hear", howHeard);
-        form.set("teammates", JSON.stringify(teammates.length ? teammates.map((t) => t.id) : null));
         form.set("travel_reimbursement", String(yesNoAnswers.questionOne === "yes"));
         form.set("trading_experience", String(yesNoAnswers.questionTwo === "yes"));
-        form.set("has_team", String(hasTeam));
         form.set("resume", resume);
 
-        const res = await fetch("/api/application", {
+        const res = await fetch("/api/application_routes/application", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -260,14 +245,12 @@ export default function ApplicationPage() {
               JSON.stringify({ submitted: true })
             );
             sessionStorage.removeItem(`migconf.user.v1:${user.id}`);
-            sessionStorage.removeItem(`migconf.team.v1:${user.id}`);
           }
         } catch {
           // ignore cache errors
         }
 
         setMessage(`Application submitted. Reference ID: ${json.id ?? "unknown"}`);
-        setAlreadySubmitted(true);
         router.replace("/dashboard");
         router.refresh();
       } catch {
@@ -278,189 +261,48 @@ export default function ApplicationPage() {
     })();
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    setDragActive(false);
-    handleResumeFiles(event.dataTransfer.files);
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = () => {
-    setDragActive(false);
-  };
-
-  const handleAddTeammate = () => {
-    if (!selectedTeammateUser) {
-      return;
-    }
-
-    if (teammates.length >= 3) {
-      setTeamMessage("You can only add up to 3 teammates.");
-      return;
-    }
-
-    const alreadyAdded = teammates.some(
-      (t) => t.id === selectedTeammateUser.id
-    );
-
-    if (alreadyAdded) {
-      setTeamMessage("That teammate is already on your list.");
-      return;
-    }
-
-    setTeammates((prev) => [
-      ...prev,
-      {id: selectedTeammateUser.id, email: selectedTeammateUser.email, full_name: selectedTeammateUser.full_name},
-    ]);
-
-    setTeamMessage("Teammate added.");
-    setSelectedTeammateUser(null);
-    setTeammateQuery("");
-  };
-
+  // YES/NO QUESTIONS FUNCTION
   const handleYesNoChange = (id: string, value: "yes" | "no") => {
     setYesNoAnswers((prev) => ({ ...prev, [id]: value }));
   };
 
+  // CHECK SUBMITTED FUNCTION
   useEffect(() => {
-    let mounted = true;
-
-    type TeamApiResponse =
-      | { team: null }
-      | {
-          team: {
-            team_id: number;
-            members: Array<{
-              user_id: string;
-              user_email: string;
-              user_name: string;
-              team_id: number | null;
-              role: string;
-              application_status?: "confirmed" | "pending";
-            }>;
-          };
-        };
-
-    const run = async () => {
-      // If the user is already on a team, load and lock the roster in the teammate UI.
-      if (loading || !user || !hasTeam || checkingSubmitted || alreadySubmitted) return;
-
-      const token = session?.access_token;
-      if (!token) return;
-
-      setTeamRosterLoading(true);
-      setTeamMessage(null);
-      try {
-        const res = await fetch("/api/team", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = (await res.json()) as TeamApiResponse;
-        if (!mounted) return;
-
-        if (!res.ok) {
-          setTeamMessage("Could not load your team. Please refresh.");
-          return;
-        }
-
-        const members = json.team?.members ?? [];
-        const others = members
-          .filter((m) => m.user_id !== user.id)
-          .map(
-            (m) =>
-              ({
-                id: m.user_id,
-                email: m.user_email ?? "",
-                full_name: (m.user_name ?? "").trim() || null,
-              }) satisfies DirectoryUser
-          )
-          .filter((m) => m.email);
-
-        setTeammates(others);
-        setSelectedTeammateUser(null);
-        setTeammateQuery("");
-      } catch {
-        if (!mounted) return;
-        setTeamMessage("Could not load your team. Please refresh.");
-      } finally {
-        if (mounted) setTeamRosterLoading(false);
-      }
-    };
-
-    void run();
-    return () => {
-      mounted = false;
-    };
-  }, [alreadySubmitted, checkingSubmitted, hasTeam, loading, session?.access_token, user]);
-
-  // Get all available users for the teammate selection
-  useEffect(() => {
-    if (loading || checkingSubmitted || alreadySubmitted) return;
-    if (!user) {
-      setAvailableUsersLoading(false);
+    const token = session?.access_token;
+    if (loading || !token || !user) {
+      setCheckingSubmitted(false);
       return;
     }
 
+     // If we already know it's submitted in this session, don't hit the DB.
+     const cacheKey = `migconf.application-submitted.v1:${user.id}`;
+     try {
+       const raw = sessionStorage.getItem(cacheKey);
+       if (raw) {
+         const parsed = JSON.parse(raw) as { submitted?: unknown } | boolean;
+         const cachedSubmitted =
+           typeof parsed === "boolean" ? parsed : typeof parsed?.submitted === "boolean" ? parsed.submitted : null;
+         if (cachedSubmitted === true) {
+           router.replace("/dashboard");
+           router.refresh();
+           return;
+         }
+       }
+     } catch {
+       // ignore cache read/parse errors
+     }
+
     const controller = new AbortController();
-    void fetchAllUsers({
-      token: session?.access_token,
-      currentUserId: user.id,
-      setUsers: setAvailableUsers,
-      setLoading: setAvailableUsersLoading,
-      signal: controller.signal,
-    });
-  
-    return () => controller.abort();
-  }, [alreadySubmitted, checkingSubmitted, loading, session?.access_token, user]);
-
-  useEffect(() => {
-    let mounted = true;
-
     const run = async () => {
-      if (loading) return;
-      if (!user) {
-        if (mounted) setCheckingSubmitted(false);
-        return;
-      }
-
-      const token = session?.access_token;
-      if (!token) {
-        if (mounted) setCheckingSubmitted(false);
-        return;
-      }
-
-      // If we already know it's submitted in this session, don't hit the DB.
-      const cacheKey = `migconf.application-submitted.v1:${user.id}`;
-      try {
-        const raw = sessionStorage.getItem(cacheKey);
-        if (raw) {
-          const parsed = JSON.parse(raw) as { submitted?: unknown } | boolean;
-          const cachedSubmitted =
-            typeof parsed === "boolean" ? parsed : typeof parsed?.submitted === "boolean" ? parsed.submitted : null;
-          if (cachedSubmitted === true) {
-            setAlreadySubmitted(true);
-            router.replace("/dashboard");
-            router.refresh();
-            return;
-          }
-        }
-      } catch {
-        // ignore cache read/parse errors
-      }
-
       setCheckingSubmitted(true);
       try {
-        const res = await fetch("/api/application-info", {
+        const res = await fetch("/api/application_routes/application-info", {
           headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
         const json = (await res.json()) as { submitted?: boolean; error?: string };
-        if (!mounted) return;
 
         if (!res.ok) {
-          // Don't block the form forever if this check fails.
           setCheckingSubmitted(false);
           return;
         }
@@ -471,7 +313,6 @@ export default function ApplicationPage() {
           } catch {
             // ignore cache errors
           }
-          setAlreadySubmitted(true);
           router.replace("/dashboard");
           router.refresh();
           return;
@@ -482,55 +323,20 @@ export default function ApplicationPage() {
         } catch {
           // ignore cache errors
         }
-        setAlreadySubmitted(false);
+      } catch {
+        if (controller.signal.aborted) return;
       } finally {
-        if (mounted) setCheckingSubmitted(false);
+        if (!controller.signal.aborted) {
+          setCheckingSubmitted(false);
+        }
       }
     };
 
     void run();
-    return () => {
-      mounted = false;
-    };
+    return () => controller.abort();
   }, [loading, router, session?.access_token, user]);
 
-  useEffect(() => {
-    let mounted = true;
-
-    const run = async () => {
-      const token = session?.access_token;
-      if (!token || !user) return;
-
-      setHasTeamLoading(true);
-      try {
-        const res = await fetch("/api/user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = (await res.json()) as { team_id?: number | null };
-        if (!mounted) return;
-
-        if (!res.ok) {
-          setHasTeam(false);
-          return;
-        }
-
-        setHasTeam(Boolean(json.team_id));
-      } catch {
-        if (!mounted) return;
-        setHasTeam(false);
-      } finally {
-        if (mounted) setHasTeamLoading(false);
-      }
-    };
-
-    if (loading || checkingSubmitted || alreadySubmitted) return;
-    void run();
-
-    return () => {
-      mounted = false;
-    };
-  }, [alreadySubmitted, checkingSubmitted, loading, session?.access_token, user]);
-
+  // Check User Session
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/signin");
@@ -561,22 +367,6 @@ export default function ApplicationPage() {
     );
   }
 
-  if (availableUsersLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
-        <p className="text-lg font-semibold text-white/80">Loading application... please wait 5 seconds</p>
-      </div>
-    );
-  }
-
-  if (hasTeamLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#032456]">
-        <p className="text-lg font-semibold text-white/80">Loading application... please wait</p>
-      </div>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-background px-4 py-16 pt-24">
       <div className="mx-auto w-full max-w-3xl space-y-7 rounded-[32px] border border-white/10 bg-slate-900/60 p-10 shadow-2xl backdrop-blur-sm">
@@ -593,7 +383,7 @@ export default function ApplicationPage() {
         
         <header>
           <p className="text-xs uppercase tracking-[0.4em] text-t-primary/50">Application</p>
-          <h1 className="mt-2 text-3xl font-semibold text-t-primary">Create your MIG Quant Conference application</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-t-primary">Submit your MIG Quant Conference application</h1>
         </header>
 
 
@@ -626,7 +416,7 @@ export default function ApplicationPage() {
               options={majors.map((m) => ({ value: m, label: m }))}
               placeholder="Select or type majors"
               value={major ? { value: major, label: major } : null}
-              onChange={(option) =>setMajor(option?.value ?? null)}
+              onChange={(option) =>setMajor(option?.value ?? "")}
               components={creatableSelectComponents}
               classNamePrefix="react-select"
               styles={creatableSelectStyles}
@@ -661,140 +451,6 @@ export default function ApplicationPage() {
             </div>
           </div>
 
-          {/* Teammates */}
-          <div className="rounded-2xl border border-white/10 bg-[#031c3f]/50 p-4">
-            <div className="flex items-center gap-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Teammates</p>
-              <button
-                type="button"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
-                onClick={() => setTeammateInfoOpen(true)}
-                aria-label="Teammate info"
-              >
-                <Info className="h-4 w-4" />
-              </button>
-            </div>
-            {hasTeam ? (
-              <p className="mt-2 text-xs text-white/60">
-                You&apos;re already on a team. Your teammates are shown below and can&apos;t be edited here.
-              </p>
-            ) : null}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {teammates.map((member) => (
-                <span
-                  key={`${member.id}`}
-                  className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white"
-                >
-                  <span>{member.full_name}</span>
-                  {!hasTeam ? (
-                    <button
-                      type="button"
-                      onClick={() => setTeammates((prev) => prev.filter((t) => t.full_name !== member.full_name))}
-                      className="ml-1 text-white/60 hover:text-white"
-                      aria-label={`Remove teammate ${member.full_name}`}
-                    >
-                      ×
-                    </button>
-                  ) : null}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <div className="relative w-full">
-                <Combobox
-                  value={selectedTeammateUser}
-                  onChange={setSelectedTeammateUser}
-                  nullable
-                  immediate
-                  disabled={hasTeam}
-                >
-                  <div className="relative">
-                    <Combobox.Input
-                      className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm font-sans text-white/90 outline-hidden placeholder:text-white/60 focus:border-white/20 focus:ring-2 focus:ring-white/10"
-                      placeholder={hasTeam ? "Team locked" : "Add people by name or email"}
-                      displayValue={(u: AvailableUser | null) => u?.email ?? ""}
-                      onChange={(e) => setTeammateQuery(e.target.value)}
-                      disabled={hasTeam}
-                    />
-                    <Combobox.Button className="absolute inset-y-0 right-0 flex items-center px-2 text-white/60 hover:text-white">
-                      <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-                        <path
-                          fillRule="evenodd"
-                          d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </Combobox.Button>
-                  </div>
-
-                  <Combobox.Options className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-white/10 bg-[#020617] py-1 shadow-2xl backdrop-blur-sm">
-                    {filteredUsers.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-white/50">No matches</div>
-                    ) : (
-                      filteredUsers.map((u) => (
-                        <Combobox.Option
-                          key={u.id}
-                          value={u}
-                          className={({ active }) =>
-                            `cursor-pointer px-3 py-2 font-sans ${
-                              active ? "bg-white/10 text-white" : "bg-transparent text-white/90"
-                            }`
-                          }
-                        >
-                          {({ selected }) => (
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 overflow-hidden rounded-full bg-white/10">
-                                {u.avatar_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={u.avatar_url} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-xs text-white/70">
-                                    {(u.full_name?.[0] ?? u.email[0]).toUpperCase()}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="min-w-0">
-                                <div className="truncate text-sm font-medium text-white">
-                                  {u.full_name ?? u.email}
-                                </div>
-                                {u.full_name ? (
-                                  <div className="truncate text-xs text-white/50">{u.email}</div>
-                                ) : null}
-                              </div>
-
-                              {selected ? (
-                                <span className="ml-auto text-[10px] uppercase tracking-[0.3em] text-white/60">
-                                  Selected
-                                </span>
-                              ) : null}
-                            </div>
-                          )}
-                        </Combobox.Option>
-                      ))
-                    )}
-                  </Combobox.Options>
-                </Combobox>
-              </div>
-
-              <Button
-                type="button"
-                className="w-full text-xs uppercase tracking-[0.4em] sm:w-auto"
-                onClick={handleAddTeammate}
-                disabled={hasTeam || !selectedTeammateUser}
-              >
-                Add
-              </Button>
-            </div>
-
-            {teamRosterLoading ? (
-              <p className="mt-2 text-xs text-white/60">Loading your team…</p>
-            ) : null}
-            {teamMessage && <p className="mt-2 text-xs text-accent">{teamMessage}</p>}
-          </div>
-
           {/* Resume upload */}
           <div>
             <label className="text-xs uppercase tracking-[0.3em] text-white/60">Upload resume</label>
@@ -826,7 +482,7 @@ export default function ApplicationPage() {
                 <p className="mt-2 text-xs text-white/60">or click to browse</p>
               </div>
             </label>
-            {resume && <p className="mt-2 text-xs text-white/60">Uploaded: {resume.name}</p>}
+            {resume && <p className="mt-2 text-sm text-white/60">Uploaded: {resume.name}</p>}
           </div>
 
           <div className="space-y-4 rounded-2xl border border-white/10 bg-black/40 p-4">
@@ -868,46 +524,6 @@ export default function ApplicationPage() {
         </form>
 
         <MessageOverlay message={message} onClose={() => setMessage(null)} />
-
-        {/* Teammate info overlay */}
-        {teammateInfoOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            onClick={() => setTeammateInfoOpen(false)}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Teammates</p>
-                  <div className="space-y-2 text-sm text-white/90">
-                    <p>
-                      You can add up to <span className="font-semibold">3</span> teammates. Teams are set when you
-                      submit your application. The compeition is a team based event, so make sure all of your teammates are interested in the event and have submitted their applications.
-                      If you do not have a team, we will match you with a team after acceptance to the conference.
-                    </p>
-                    <p className="text-white/70">
-                      If you&apos;re already on a team, this section is locked and you can&apos;t add or remove people
-                      here. Please contact the conference staff if you have any questions or concerns.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-md px-2 py-1 text-white/60 hover:text-white"
-                  onClick={() => setTeammateInfoOpen(false)}
-                  aria-label="Close teammate info"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
