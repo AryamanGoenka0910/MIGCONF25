@@ -1,7 +1,7 @@
 "use client";
 
-//TODO FIX ABORT CONTROLLERs
 //TODO FIX TYPES
+//Check Team Capacity (max 4 people)
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,6 @@ import {
   LogOut,
   InfoIcon,
   PlusIcon,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserDisplayName } from "@/lib/utils";
@@ -28,6 +27,9 @@ import { Combobox } from "@headlessui/react";
 import { AvailableUser } from "@/lib/types";
 import { fetchAllUsers } from "@/lib/fetch-all-users";
 import type { InviteUserRow, Invite, User } from "@/lib/types";
+
+import MessageOverlay from "@/components/MessageOverlay";
+
 
 type ApplicationStatus = "not_started" | "submitted";
 
@@ -56,7 +58,7 @@ const statusStyles: Record<ApplicationStatus, string> = {
 };
 
 const statusLabels: Record<ApplicationStatus, string> = {
-  not_started: "Not started",
+  not_started: "Not Started",
   submitted: "Submitted",
 };
 
@@ -64,7 +66,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading, session } = useSession();
 
-  const [reloadKey, setReloadKey] = useState<number>(0);
+  const [reloadKeyForInvites, setReloadKeyForInvites] = useState<number>(0);
+  const [reloadKeyForTeam, setReloadKeyForTeam] = useState<number>(0);
 
   // User Application Info
   const [applicationStatus, setApplicationStatus] = useState<ApplicationStatus>("not_started");
@@ -73,7 +76,6 @@ export default function DashboardPage() {
 
   // Profile Info
   const [userInfo, setUserInfo] = useState<User | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
   // Team Info
@@ -85,6 +87,10 @@ export default function DashboardPage() {
   const [sentInvites, setSentInvites] = useState<Invite[]>([]);
   const [receivedInvites, setReceivedInvites] = useState<Invite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(false);
+
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [sendingInviteLoading, setSendingInviteLoading] = useState(false);
+  const [acceptingInviteLoading, setAcceptingInviteLoading] = useState<Record<string, boolean>>({});
 
   // Section Toggles
   const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
@@ -121,21 +127,41 @@ export default function DashboardPage() {
   }, [loading, session?.access_token, user]);
 
   const filteredUsers = useMemo(() => {
-    const q = teammateQuery.trim().toLowerCase();
-    if (!q) return availableUsers;
+    // Get IDs of users to exclude
+    const currentUserId = user?.id;
+    const teammateIds = new Set(teamInfo?.team?.members.map((m) => m.user_id));
+    const sentInviteUserIds = new Set(sentInvites.map((i) => i.to_user_id));
+    const receivedInviteUserIds = new Set(receivedInvites.map((i) => i.from_user_id));
 
-    return availableUsers.filter((u) => {
+    // Filter out current user, team members, and invited users
+    const excludedUsers = availableUsers.filter((u) => {
+      if (u.id === currentUserId) return false;
+      if (teammateIds.has(u.id)) return false;
+      if (sentInviteUserIds.has(u.id)) return false;
+      if (receivedInviteUserIds.has(u.id)) return false;
+      return true;
+    });
+
+    // Apply search query
+    const q = teammateQuery.trim().toLowerCase();
+    if (!q) return excludedUsers;
+
+    return excludedUsers.filter((u) => {
       const name = (u.full_name ?? "").toLowerCase();
       const email = u.email.toLowerCase();
       return name.includes(q) || email.includes(q);
     });
-  }, [availableUsers, teammateQuery]);
+  }, [availableUsers, teammateQuery, user?.id, teamInfo, sentInvites, receivedInvites]);
 
   const inviteTeammate = async () => {
     const token = session?.access_token;
-    if (!token) return;
-    if (!selectedTeammateUser?.id || !teamInfo?.team?.team_id) return;
+    if (!token || !selectedTeammateUser?.id || !teamInfo?.team?.team_id) {
+      setSendingInviteLoading(false);
+      setInviteError(null);
+      return;
+    };
     
+    setSendingInviteLoading(true);
     console.log("Inviting teammate", selectedTeammateUser.id, teamInfo.team.team_id);
     const res = await fetch("/api/invite_routes/send_team_invite", {
       method: "POST",
@@ -146,9 +172,19 @@ export default function DashboardPage() {
     });
 
     if (!res.ok) {
-      console.error(await res.json());
+      const json = await res.json();
+      console.error(json);
+
+      if (res.status === 400) {
+        setInviteError(json.error);
+      }
+
+      setSendingInviteLoading(false);
       return;
     }
+
+    setInviteError(null);
+    setSendingInviteLoading(false);
   };
 
   const rejectInvite = async (inviteId: string) => {
@@ -171,6 +207,76 @@ export default function DashboardPage() {
     }
   };
 
+  const cancelInvite = async (inviteId: string) => {
+    const token = session?.access_token;
+    if (!token) return;
+    if (!inviteId) return;
+
+    console.log("Cancelling invite", inviteId);
+    const res = await fetch("/api/invite_routes/cancel_invite", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ invite_id: inviteId }),
+    });
+
+    if (!res.ok) {
+      console.error(await res.json());
+      return;
+    }
+  };
+
+  const acceptInvite = async (inviteId: string) => {
+    const token = session?.access_token;
+    if (!token || !inviteId) {
+      setAcceptingInviteLoading((prev) => ({ ...prev, [inviteId]: false }));
+      return
+    };
+
+    setAcceptingInviteLoading((prev) => ({ ...prev, [inviteId]: true }));
+    console.log("Accepting invite", inviteId);
+
+    const res = await fetch("/api/invite_routes/accept_invite", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ invite_id: inviteId }),
+    });
+
+    if (!res.ok) {
+      const json = await res.json();
+      console.error(json);
+
+      if (res.status === 400) {
+        setInviteError(json.error);
+      }
+      setAcceptingInviteLoading((prev) => ({ ...prev, [inviteId]: false }));
+      return;
+    }
+
+    setAcceptingInviteLoading((prev) => ({ ...prev, [inviteId]: false }));
+  };
+
+  const leaveTeam = async () => {
+    const token = session?.access_token;
+    if (!token || !teamInfo?.team?.team_id) return;
+
+    console.log("Leaving team", teamInfo.team.team_id);
+    const res = await fetch("/api/team_routes/leave_team", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ team_id: teamInfo.team.team_id }),
+    });
+
+    if (!res.ok) {
+      console.error(await res.json());
+      return;
+    }
+  };
   /////\\\\\\
 
   // Redirect unauthenticated users to the sign-in page once session loading finishes.
@@ -183,7 +289,6 @@ export default function DashboardPage() {
     const token = session?.access_token;
     if (loading || !token || !user) {
       setUserInfo(null);
-      setProfileError(null);
       setProfileLoading(false);
       return;
     }
@@ -197,7 +302,6 @@ export default function DashboardPage() {
         const cached = JSON.parse(cachedRaw) as User | null;
         if (cached?.user_id === user.id) {
           setUserInfo(cached);
-          setProfileError(null);
           setProfileLoading(false);
           return;
         }
@@ -208,11 +312,10 @@ export default function DashboardPage() {
 
     const controller = new AbortController();
     const run = async () => {
-      setProfileError(null);
       setProfileLoading(true);
 
       try {
-        const userRes = await fetch("/api/user", {
+        const userRes = await fetch("/api/user_routes/user", {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
@@ -222,7 +325,6 @@ export default function DashboardPage() {
         if (!userRes.ok) {
           setUserInfo(null);
           setProfileLoading(false);
-          setProfileError(userJson.error ?? "Failed to load profile.");
           return;
         }
 
@@ -236,7 +338,6 @@ export default function DashboardPage() {
       } catch {
         if (controller.signal.aborted) return;
         setUserInfo(null);
-        setProfileError("Failed to load profile.");
       } finally {
         if (!controller.signal.aborted) {
           setProfileLoading(false);
@@ -286,7 +387,7 @@ export default function DashboardPage() {
     const controller = new AbortController();
     const run = async () => {
       try {
-        const appRes = await fetch("/api/application-info", {
+        const appRes = await fetch("/api/application_routes/application-info", {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
@@ -343,23 +444,23 @@ export default function DashboardPage() {
       return;
     }
 
-    // Cache team info for the duration of the browser session (only for users with a team).
-    // This avoids refetching /api/team on every Dashboard visit in the same session.
-    const cacheKey = `migconf.team.v1:${user.id}`;
-    try {
-      const cachedRaw = sessionStorage.getItem(cacheKey);
-      if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw) as { team: TeamResponse["team"] } | null;
-        if (cached?.team && cached.team.team_id === teamId) {
-          setTeamInfo({ team: cached.team });
-          setTeamError(null);
-          setTeamLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Ignore cache read/parse errors and fall back to network.
-    }
+    // // Cache team info for the duration of the browser session (only for users with a team).
+    // // This avoids refetching /api/team on every Dashboard visit in the same session.
+    // const cacheKey = `migconf.team.v1:${user.id}`;
+    // try {
+    //   const cachedRaw = sessionStorage.getItem(cacheKey);
+    //   if (cachedRaw) {
+    //     const cached = JSON.parse(cachedRaw) as { team: TeamResponse["team"] } | null;
+    //     if (cached?.team && cached.team.team_id === teamId) {
+    //       setTeamInfo({ team: cached.team });
+    //       setTeamError(null);
+    //       setTeamLoading(false);
+    //       return;
+    //     }
+    //   }
+    // } catch {
+    //   // Ignore cache read/parse errors and fall back to network.
+    // }
 
     const controller = new AbortController();
     const run = async () => {
@@ -368,7 +469,7 @@ export default function DashboardPage() {
 
 
       try {
-        const teamRes = await fetch("/api/team", {
+        const teamRes = await fetch("/api/team_routes/team", {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
@@ -376,23 +477,23 @@ export default function DashboardPage() {
 
         if (!teamRes.ok) {
           setTeamInfo({ team: null });
-          setTeamError(teamJson.error ?? "Failed to load team.");
+          setTeamError(teamJson.error ?? "Failed to load team Refresh");
           setTeamLoading(false);
           return;
         }
 
         setTeamInfo(teamJson as TeamResponse);
-        try {
-          if ((teamJson as TeamResponse)?.team) {
-            sessionStorage.setItem(cacheKey, JSON.stringify({ team: (teamJson as TeamResponse).team }));
-          }
-        } catch {
-          // Ignore cache write errors (quota, privacy mode, etc).
-        }
+        // try {
+        //   if ((teamJson as TeamResponse)?.team) {
+        //     sessionStorage.setItem(cacheKey, JSON.stringify({ team: (teamJson as TeamResponse).team }));
+        //   }
+        // } catch {
+        //   // Ignore cache write errors (quota, privacy mode, etc).
+        // }
       } catch {
         if (controller.signal.aborted) return;
         setTeamInfo({ team: null });
-        setTeamError("Failed to load team.");
+        setTeamError("Failed to load team Refresh.");
       } finally {
         if (!controller.signal.aborted) {
           setTeamLoading(false);
@@ -406,7 +507,7 @@ export default function DashboardPage() {
       clearTimeout(t);
       controller.abort();
     };
-  }, [loading, profileLoading, session?.access_token, user, userInfo?.team_id]);
+  }, [loading, profileLoading, session?.access_token, user, userInfo?.team_id, reloadKeyForTeam]);
 
 
   useEffect(() => {
@@ -463,7 +564,7 @@ export default function DashboardPage() {
 
     void run();
     return () => controller.abort();
-  }, [loading, session?.access_token, user, reloadKey]);
+  }, [loading, session?.access_token, user, reloadKeyForInvites]);
 
 
   if (loading) {
@@ -488,7 +589,7 @@ export default function DashboardPage() {
 
   const quickStats = [
     { label: "Role", value: userRole },
-    { label: "Application", value: applicationStatusLoading ? "…" : statusLabels[applicationStatus] },
+    { label: "Email", value: userInfo?.user_email ?? user?.email ?? "Unavailable" },
     { label: "Team members", value: profileLoading || teamLoading ? "…" : `${teamMembers.length}` },
   ];
 
@@ -573,7 +674,7 @@ export default function DashboardPage() {
             {quickStats.map((s) => (
               <div key={s.label} className="rounded-2xl border border-border bg-background/25 p-5">
                 <div className="text-xs text-muted-foreground">{s.label}</div>
-                <div className="mt-1 text-xl font-semibold tracking-tight">{s.value}</div>
+                <div className={`mt-1 font-semibold tracking-tight text-xl ${s.label === "Email" ? "wrap-break-word" : ""}`}>{s.value}</div>
               </div>
             ))}
           </div>
@@ -587,12 +688,22 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
-
-        {/* Invites */}
-        {receivedInvites.length > 0 || sentInvites.length > 0 ? (
-          <section className="mt-6">
-            <GlassCard title="Team Invites">
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
+          
+        {/* Invites + Team */}
+        <section className="mt-6 grid gap-6 md:grid-cols-2">
+          {/* Invites */}
+          <GlassCard 
+            title="Team Invites"
+            applicationStatus={applicationStatus}
+            teamAdd={true}
+            setTeamAddSection={setTeamAddSection}
+          >
+              {invitesLoading ? (
+                <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
+                  Loading invites…
+                </div>
+              ) : (
+              <div className="mt-5 space-y-4">
               {/* Incoming */}
                 <div className="rounded-2xl border border-border bg-background/25 p-4">
                   <div className="flex items-center justify-between gap-3 mb-5">
@@ -607,7 +718,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="grid gap-3">
                       {receivedInvites.map((i) => (
-                        <TeamRow id={i.from_user_id}>
+                        <TeamRow key={String(i.invite_id)} id={i.from_user_id}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
                               <div className="truncate text-sm font-semibold">
@@ -617,17 +728,27 @@ export default function DashboardPage() {
                                 {i.from_user?.user_email ?? ""}
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="default">
-                                Accept
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={async () => {
-                                await rejectInvite(i.invite_id);
-                                setReloadKey(reloadKey + 1);
-                              }}>
-                                Reject
-                              </Button>
-                            </div>
+                              {acceptingInviteLoading[i.invite_id] ? (
+                                <Button size="sm" variant="default" disabled>
+                                  Accepting…
+                                </Button>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="default" onClick={async () => {
+                                    await acceptInvite(i.invite_id);
+                                    setReloadKeyForTeam(reloadKeyForTeam + 1);
+                                    setReloadKeyForInvites(reloadKeyForInvites + 1);
+                                  }}>
+                                    Accept
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={async () => {
+                                    await rejectInvite(i.invite_id);
+                                    setReloadKeyForInvites(reloadKeyForInvites + 1);
+                                  }}>
+                                    Reject
+                                  </Button>
+                                </div>
+                             )}
                           </div>
                         </TeamRow>
                       ))}
@@ -649,7 +770,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="grid gap-3">
                     {sentInvites.map((i) => (
-                      <TeamRow id={i.to_user_id}>
+                      <TeamRow key={String(i.invite_id)} id={i.to_user_id}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate text-sm font-semibold">
@@ -660,7 +781,10 @@ export default function DashboardPage() {
                             </div>
                           </div>
 
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={async () => {
+                            await cancelInvite(i.invite_id);
+                            setReloadKeyForInvites(reloadKeyForInvites + 1);
+                          }}>
                               Cancel
                           </Button>
                         </div>
@@ -670,39 +794,14 @@ export default function DashboardPage() {
                 )}      
               </div>
             </div>
-          </GlassCard>
-        </section>
-        ) : (
-        null  
-      )}
-          
-        {/* Profile + Team */}
-        <section className="mt-6 grid gap-6 md:grid-cols-2">
-          {/* Profile */}
-          <GlassCard
-            title="Profile"
-          >
-            {profileLoading ? (
-              <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
-                Loading profile…
-              </div>
-            ) : profileError ? (
-              <div className="rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
-                {profileError}
-              </div>
-            ) : !profileLoading ? (
-            <div className="space-y-3 text-sm">
-              <Row k="Name" v={displayName} />
-              <Row k="Email" v={userInfo?.user_email ?? user?.email ?? "Unavailable"} />
-              <Row k="Conference role" v={userRole} />
-            </div>
-            ) : null}
+            )}
           </GlassCard>
 
           {/* Team */}
           <GlassCard
             title="Team"
             teamAdd={true}
+            applicationStatus={applicationStatus}
             setTeamAddSection={setTeamAddSection}
           >
             {profileLoading || teamLoading ? (
@@ -720,7 +819,7 @@ export default function DashboardPage() {
             ) : (
               <div className="grid gap-3">
                 {teamMembers.map((m) => (
-                  <TeamRow id={m.user_id}>
+                  <TeamRow key={m.user_id} id={m.user_id}>
                    
                     <div className="relative flex items-center justify-between gap-4">
                       <div className="min-w-0">
@@ -741,6 +840,15 @@ export default function DashboardPage() {
                     </div>
                   </TeamRow>
                 ))}
+
+                {teamMembers.length > 1 && (
+                <Button size="sm" variant="outline" onClick={async () => {
+                  await leaveTeam();
+                  setReloadKeyForTeam(reloadKeyForTeam + 1);
+                }}>
+                  Leave Team
+                  </Button>
+                )}
               </div>
             )}
           </GlassCard>
@@ -857,36 +965,18 @@ export default function DashboardPage() {
                       The MIG Quant Conference is a team-based event. Teams may consist of up to 4 members total
                       (you + up to 3 teammates).
                     </p>
-                    <p>There are two ways to form a team:</p>
+                    <p className="font-semibold text-white">Steps to form a team:</p>
                     <div className="space-y-3">
-                      <div>
-                        <p className="font-semibold text-white">Scenario 1: Everyone Applies Individually First</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          <li>Each team member submits their application separately.</li>
-                          <li>
-                            After all members have submitted, you may create a team in the dashboard team section and add
-                            your teammates.
-                          </li>
-                          <li>
-                            All team members must have already submitted their individual applications before forming
-                            the team.
-                          </li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white">
-                          Scenario 2: One Person Creates the Team During Application
+                        <p className=" text-white">
+                          Step 1: Everyone Applies Individually First
                         </p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          <li>One team member submits their application and creates a team at that time.</li>
-                          <li>They may add up to 3 teammates who have not yet submitted their applications.</li>
-                          <li>
-                            The invited teammates must then submit their applications and their team should be visible in the application portal.
-                          </li>
-                        </ul>
-                      </div>
+                        <p className=" text-white">
+                          Step 2: One Person Invites Teammates to their Team Using the Add Teammates Button in the Team Section
+                        </p>
+                        <p className=" text-white">
+                          Step 3: The Teammate Accepts the Invite In the Invites Section
+                        </p>
                     </div>
-  
                   </div>
                 </div>
                 <button
@@ -955,55 +1045,58 @@ export default function DashboardPage() {
                         />
                       </svg>
                     </Combobox.Button>
-                  </div>
+                  
 
-                  <Combobox.Options className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-white/10 bg-[#020617] py-1 shadow-2xl backdrop-blur-sm">
-                    {filteredUsers.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-white/50">No matches</div>
-                    ) : (
-                      filteredUsers.map((u) => (
-                        <Combobox.Option
-                          key={u.id}
-                          value={u}
-                          className={({ active }) =>
-                            `cursor-pointer px-3 py-2 font-sans ${
-                              active ? "bg-white/10 text-white" : "bg-transparent text-white/90"
-                            }`
-                          }
-                        >
-                          {({ selected }) => (
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 overflow-hidden rounded-full bg-white/10">
-                                {u.avatar_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={u.avatar_url} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-xs text-white/70">
-                                    {(u.full_name?.[0] ?? u.email[0]).toUpperCase()}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="min-w-0">
-                                <div className="truncate text-sm font-medium text-white">
-                                  {u.full_name ?? u.email}
+                    <Combobox.Options className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-white/10 bg-[#020617] py-1 shadow-2xl backdrop-blur-sm">
+                      {availableUsersLoading ? (
+                        <div className="px-3 py-2 text-sm text-white/50">Loading...</div>
+                      ) : filteredUsers.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-white/50">No matches</div>
+                      ) : (
+                        filteredUsers.map((u) => (
+                          <Combobox.Option
+                            key={u.id}
+                            value={u}
+                            className={({ active }) =>
+                              `cursor-pointer px-3 py-2 font-sans ${
+                                active ? "bg-white/10 text-white" : "bg-transparent text-white/90"
+                              }`
+                            }
+                          >
+                            {({ selected }) => (
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 overflow-hidden rounded-full bg-white/10">
+                                  {u.avatar_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={u.avatar_url} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-xs text-white/70">
+                                      {(u.full_name?.[0] ?? u.email[0]).toUpperCase()}
+                                    </div>
+                                  )}
                                 </div>
-                                {u.full_name ? (
-                                  <div className="truncate text-xs text-white/50">{u.email}</div>
+
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-medium text-white">
+                                    {u.full_name ?? u.email}
+                                  </div>
+                                  {u.full_name ? (
+                                    <div className="truncate text-xs text-white/50">{u.email}</div>
+                                  ) : null}
+                                </div>
+
+                                {selected ? (
+                                  <span className="ml-auto text-[10px] uppercase tracking-[0.3em] text-white/60">
+                                    Selected
+                                  </span>
                                 ) : null}
                               </div>
-
-                              {selected ? (
-                                <span className="ml-auto text-[10px] uppercase tracking-[0.3em] text-white/60">
-                                  Selected
-                                </span>
-                              ) : null}
-                            </div>
-                          )}
-                        </Combobox.Option>
-                      ))
-                    )}
-                  </Combobox.Options>
+                            )}
+                          </Combobox.Option>
+                        ))
+                      )}
+                    </Combobox.Options>
+                  </div>
                 </Combobox>
               </div>
 
@@ -1025,20 +1118,24 @@ export default function DashboardPage() {
                   Cancel
                 </Button>
                 <Button
-                  variant="default"
-                  disabled={!selectedTeammateUser}
-                  onClick={() => {
+                  variant="outline"
+                  disabled={!selectedTeammateUser || sendingInviteLoading}
+                  onClick={async () => {
+                    await inviteTeammate();
+                    setReloadKeyForInvites(reloadKeyForInvites + 1);
                     setTeamAddSection(false);
-                    inviteTeammate();
-                    setReloadKey(reloadKey + 1);
+                    setSelectedTeammateUser(null);
                   }}
                 >
-                  Add teammate
+                  {sendingInviteLoading ? "Sending..." : "Add teammate"}
                 </Button>
               </div>
             </div>
           </div>
         )}
+                
+        <MessageOverlay message={inviteError} onClose={() => setInviteError(null)} />
+        
       </div>
     </main>
   );
@@ -1048,11 +1145,13 @@ function GlassCard({
   title,
   children,
   teamAdd = false,
+  applicationStatus = "not_started",
   setTeamAddSection,
 }: {
   title: string;
   children: React.ReactNode;
   teamAdd?: boolean;
+  applicationStatus?: ApplicationStatus;
   setTeamAddSection?: (open: boolean) => void;
 }) {
   return (
@@ -1073,7 +1172,7 @@ function GlassCard({
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{title}</div>
           </div>
-          {teamAdd && (
+          {(teamAdd && applicationStatus === "submitted") && (
             <Button variant="outline" onClick={() => setTeamAddSection?.(true)}>
               <PlusIcon className="h-4 w-4" />
             </Button>
@@ -1082,15 +1181,6 @@ function GlassCard({
 
         <div className="mt-5">{children}</div>
       </div>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-border bg-background/20 px-4 py-3">
-      <div className="text-xs text-muted-foreground">{k}</div>
-      <div className="text-sm font-semibold">{v}</div>
     </div>
   );
 }

@@ -26,7 +26,7 @@ export async function fetchAllUsers({
   }
 
   try {
-    const res = await fetch("/api/user-directory?includeTeamed=" + (includeTeamed ?? "false"), {
+    const res = await fetch("/api/user_routes/user-directory?includeTeamed=" + (includeTeamed ?? "false"), {
       headers: { Authorization: `Bearer ${token}` },
       signal,
     });
