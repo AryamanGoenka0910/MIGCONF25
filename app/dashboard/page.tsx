@@ -905,7 +905,7 @@ export default function DashboardPage() {
                 <div>
                   <div className="text-sm font-semibold">Questions?</div>
                   <a
-                    href="mailto:mig.board@umich.edu"
+                    href="mailto:mig.quant.board@umich.edu"
                     className="text-sm text-muted-foreground underline underline-offset-4"
                   >
                     mig.quant.board@umich.edu

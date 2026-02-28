@@ -2,9 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useSession } from "@/hooks/useSession";
+import { beginSignOut } from "@/lib/signout";
+
 
 const HamburgerDrawer = () => {
+  const router = useRouter();
+  const { user } = useSession();
+  
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -138,7 +145,7 @@ const HamburgerDrawer = () => {
               >
                 Home
               </Link>
-              <Link
+              {/* <Link
                 href="/schedule"
                 onClick={closeMenu}
                 className="block rounded-xl px-4 py-3 text-sm font-semibold tracking-widest text-white/90 hover:bg-white/10"
@@ -151,7 +158,7 @@ const HamburgerDrawer = () => {
                 className="block rounded-xl px-4 py-3 text-sm font-semibold tracking-widest text-white/90 hover:bg-white/10"
               >
                 Announcements
-              </Link>
+              </Link> */}
               <Link
                 href="/sponsors"
                 onClick={closeMenu}
@@ -168,16 +175,47 @@ const HamburgerDrawer = () => {
               </Link>
             </div>
 
-            <div className="mt-4 border-t border-white/10 pt-4">
-              <a
-                href="https://forms.gle/WTdQdMp8XVGQuywM9"
-                target="_blank"
-                rel="noreferrer"
-                className="block rounded-xl bg-primary px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.3em] text-primary-foreground hover:opacity-90"
-              >
-                Sign up
-              </a>
-            </div>
+            {user ? 
+            (
+              <div className="mt-4 border-t border-white/10 pt-4 space-y-4 flex flex-col items-center justify-center w-full">
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => router.push("/dashboard")}
+                >
+                  Dashboard
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => beginSignOut(router, { returnTo: "/" })}
+                >
+                  Sign Out
+                </Button>
+              </div>
+
+            ) : (
+              <div className="mt-4 border-t border-white/10 pt-4 space-y-4 flex flex-col items-center justify-center w-full">
+                <Button
+                  variant="default"
+                  onClick={() => router.push("/signup")}
+                  className="w-full"
+                >
+                  Sign Up
+                </Button>
+              
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/signin")}
+                  className="w-full"
+                >
+                  Sign In
+                </Button>
+              </div>
+            )}
+                
+            
           </div>
         </aside>
       </div>

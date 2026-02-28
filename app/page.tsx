@@ -64,7 +64,7 @@ export default function Home() {
                 </div>
 
                 <div className="w-full md:w-auto">
-                  <CountdownTimer targetDate="2026-03-05T00:00:00Z" />
+                  <CountdownTimer targetDate="2026-03-05T05:00:00Z" />
                   <div className="mt-6 flex justify-center md:justify-end">
                     <Button
                       size="xl"
@@ -163,7 +163,7 @@ export default function Home() {
               </h2>
               <p className="mx-auto mt-4 max-w-3xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
                 Email us at{" "}
-                <span className="font-semibold text-foreground">mig.board@umich.edu</span> and visit{" "}
+                <span className="font-semibold text-foreground">mig.quant.board@umich.edu</span> and visit{" "}
                 <Link className="text-primary underline underline-offset-4" href="https://michiganinvestmentgroup.com/" target="_blank">
                   michiganinvestmentgroup.com
                 </Link>

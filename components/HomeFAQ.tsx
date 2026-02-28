@@ -83,7 +83,7 @@ const HomeFAQ = () => {
       title: "Contact",
       body: (
         <p className={cardBodyStyles}>
-          Please contact at mig.board@umich.edu with any questions.
+          Please contact at mig.quant.board@umich.edu with any questions.
         </p>
       ),
     },
