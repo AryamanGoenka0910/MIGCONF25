@@ -27,10 +27,20 @@ export function beginSignOut(router: RouterLike, options: SignOutOptions = {}) {
 }
 
 /**
- * Clears the current session locally (no network round-trip).
+ * Clears the current session locally.
+ * Falls back to manually wiping stored tokens if the API call fails (e.g. 403).
  */
 export async function localSignOut() {
   const { supabase } = await import("@/lib/supabase-client");
-  await supabase.auth.signOut({ scope: "local" });
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // API call failed — manually clear every Supabase auth key from storage.
+    if (typeof window !== "undefined") {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-"))
+        .forEach((k) => localStorage.removeItem(k));
+    }
+  }
 }
 
