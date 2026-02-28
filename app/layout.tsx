@@ -11,18 +11,18 @@ const _geist = Geist({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
-    default: "migconf-25.vercel.app",
-    template: "%s | migconf-25.vercel.app",
+    default: "migconf.com",
+    template: "%s | migconf.com",
   },
   description: "Official Website for the 2025 MIG Quant Conference",
   openGraph: {
-    title: "migconf-25.vercel.app",
+    title: "migconf.com",
     description: "Official Website for the 2025 MIG Quant Conference",
-    url: "https://migconf-25.vercel.app",
-    siteName: "migconf-25.vercel.app",
+    url: "https://migconf.com",
+    siteName: "migconf.com",
     images: [
       {
-        url: "https://migconf-25.vercel.app/favicon.ico",
+        url: "https://migconf.com/favicon.ico",
         width: 1080,
         height: 1080,
       },
