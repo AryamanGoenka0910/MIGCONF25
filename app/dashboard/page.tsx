@@ -867,7 +867,7 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <div className="text-sm font-semibold">Application Deadline</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      March 5th, 2026 at 11:59 PM ET
+                      March 6th, 2026 at 11:59 PM ET
                     </div>
 
                     {/* <div className="mt-2 text-xs text-destructive">Deadline has passed</div> */}
