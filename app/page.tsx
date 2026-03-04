@@ -64,7 +64,7 @@ export default function Home() {
                 </div>
 
                 <div className="w-full md:w-auto">
-                  <CountdownTimer targetDate="2026-03-06T05:00:00Z" />
+                  <CountdownTimer targetDate="2026-03-07T05:00:00Z" />
                   <div className="mt-6 flex justify-center md:justify-end">
                     <Button
                       size="xl"
