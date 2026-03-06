@@ -48,7 +48,7 @@ const HomeFAQ = () => {
       body: (
         <p className={cardBodyStyles}>
           The conference will be held on <strong className={strongStyles}>March 20th, 2026</strong> at the University of Michigan, Ross School of Business from
-          <strong className={strongStyles}> 10:30 am EST to 5:30 pm EST</strong>. All attendees will be provided with company swag and food
+          <strong className={strongStyles}> 12:00 pm EST to 7:30 pm EST</strong>. All attendees will be provided with company swag and food
         </p>
       ),
     },
