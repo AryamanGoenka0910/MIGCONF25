@@ -124,6 +124,8 @@ const creatableSelectStyles: StylesConfig<SelectOption, false> = {
 };
 
 
+const APPLICATIONS_CLOSED = true;
+
 export default function ApplicationPage() {
   const router = useRouter();
   const { user, loading, session } = useSession();
@@ -364,6 +366,21 @@ export default function ApplicationPage() {
       <div className="flex min-h-screen items-center justify-center bg-[#032456]">
         <p className="text-lg font-semibold text-white/80">Checking application status...</p>
       </div>
+    );
+  }
+
+  if (APPLICATIONS_CLOSED) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="mx-auto w-full max-w-md space-y-4 rounded-[32px] border border-white/10 bg-slate-900/60 p-10 text-center shadow-2xl backdrop-blur-sm">
+          <p className="text-xs uppercase tracking-[0.4em] text-t-primary/50">Applications</p>
+          <h1 className="text-2xl font-semibold text-t-primary">Applications are closed</h1>
+          <p className="text-sm text-t-primary/60">The application deadline has passed. Thank you for your interest in the MIG Quant Conference.</p>
+          <Link href="/dashboard" className="mt-4 inline-block text-xs uppercase tracking-[0.3em] text-t-primary/50 hover:text-t-primary">
+            ← Back to dashboard
+          </Link>
+        </div>
+      </main>
     );
   }
 

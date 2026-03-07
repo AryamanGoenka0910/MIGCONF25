@@ -634,21 +634,22 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="default"
-                disabled={applicationStatusLoading || isApplicationSubmitted || applicationButtonLoading}
+                disabled={true}
                 onClick={() => {
                   if (applicationStatusLoading || isApplicationSubmitted) return;
                   setApplicationButtonLoading(true);
                   router.push("/application");
                 }}
               >
-                {applicationStatusLoading
+                {/* {applicationStatusLoading
                   ? "Checking…"
                   : isApplicationSubmitted
                     ? "Application Submitted"
                     : applicationButtonLoading
                       ? "Opening…"
                       : "Start Application"}
-                {applicationStatusLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />}
+                {applicationStatusLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />} */}
+                Application Deadline Has Passed
               </Button>
 
               <Button
@@ -870,7 +871,7 @@ export default function DashboardPage() {
                       March 6th, 2026 at 11:59 PM ET
                     </div>
 
-                    {/* <div className="mt-2 text-xs text-destructive">Deadline has passed</div> */}
+                    <div className="mt-2 text-xs text-destructive">Deadline has passed</div>
                   </div>
                 </div>
               </div>
