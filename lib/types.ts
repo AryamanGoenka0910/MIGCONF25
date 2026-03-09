@@ -17,6 +17,7 @@ type User = {
   user_name: string;
   team_id: number | null;
   role: string;
+  status: string | null;
 };
 
 type InviteUserRow = {
@@ -40,4 +41,20 @@ type Invite = {
 };
 
 
-export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite };
+type AdminApplication = {
+  application_id: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  school: string;
+  major: string;
+  grad_year: string;
+  how_did_you_hear: string;
+  travel_reimbursement: boolean;
+  trading_experience: boolean;
+  submitted_at: string | null;
+  status: "app_submitted" | "app_accepted" | "app_rejected" | null;
+  travel_budget: number;
+};
+
+export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication };

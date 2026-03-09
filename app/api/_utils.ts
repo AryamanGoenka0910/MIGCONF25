@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, type User as SupabaseUser } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export function jsonError(status: number, error: string) {
   return NextResponse.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
@@ -41,4 +42,28 @@ export async function requireAuthUser(request: Request): Promise<
   }
 
   return { ok: true, user: authData.user, token };
+}
+
+export async function requireAdmin(request: Request): Promise<
+  | { ok: true; user: SupabaseUser }
+  | { ok: false; response: NextResponse }
+> {
+  const auth = await requireAuthUser(request);
+  if (!auth.ok) return { ok: false, response: auth.response };
+
+  const { data: userData, error: userError } = await supabaseAdmin
+    .from("Users")
+    .select("role")
+    .eq("user_id", auth.user.id)
+    .single();
+
+  if (userError || !userData) {
+    return { ok: false, response: jsonError(403, "Forbidden.") };
+  }
+
+  if (userData.role !== "Admin") {
+    return { ok: false, response: jsonError(403, "Forbidden.") };
+  }
+
+  return { ok: true, user: auth.user };
 }
