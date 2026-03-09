@@ -41,6 +41,13 @@ type Invite = {
 };
 
 
+type AdminTeammate = {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  status: "app_submitted" | "app_accepted" | "app_rejected" | null;
+};
+
 type AdminApplication = {
   application_id: string;
   user_id: string;
@@ -55,6 +62,8 @@ type AdminApplication = {
   submitted_at: string | null;
   status: "app_submitted" | "app_accepted" | "app_rejected" | null;
   travel_budget: number;
+  team_id: number | null;
+  teammates: AdminTeammate[];
 };
 
-export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication };
+export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication, AdminTeammate };

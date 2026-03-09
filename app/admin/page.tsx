@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BackgroundGlow from "@/components/background-glow";
+import { ChevronDown } from "lucide-react";
 import type { AdminApplication } from "@/lib/types";
 
 type AccessState = "loading" | "denied" | "granted";
@@ -51,6 +52,17 @@ export default function AdminPage() {
   const [budgetInputs, setBudgetInputs] = useState<Record<string, string>>({});
   const [budgetLoading, setBudgetLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const hasFetched = useRef(false);
+
+  const toggleRow = (appId: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(appId)) next.delete(appId);
+      else next.add(appId);
+      return next;
+    });
+  };
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -111,7 +123,8 @@ export default function AdminPage() {
   }, [session]);
 
   useEffect(() => {
-    if (accessState === "granted") {
+    if (accessState === "granted" && !hasFetched.current) {
+      hasFetched.current = true;
       fetchApplications();
     }
   }, [accessState, fetchApplications]);
@@ -309,15 +322,28 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredApplications.map((app, i) => (
+                {filteredApplications.map((app) => (
+                  <Fragment key={app.application_id}>
                   <tr
-                    key={app.application_id}
-                    className={cn(
-                      "border-b border-white/5 hover:bg-white/5 transition-colors",
-                      i === filteredApplications.length - 1 && "border-b-0"
-                    )}
+                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{app.user_name}</td>
+                    <td className="px-4 py-3 font-medium text-white whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleRow(app.application_id)}
+                          className="text-white/40 hover:text-white/80 transition-colors"
+                        >
+                          <ChevronDown
+                            size={14}
+                            className={cn(
+                              "transition-transform",
+                              expandedRows.has(app.application_id) && "rotate-180"
+                            )}
+                          />
+                        </button>
+                        {app.user_name}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-white/60">{app.user_email}</td>
                     <td className="px-4 py-3">{app.school}</td>
                     <td className="px-4 py-3">{app.major}</td>
@@ -416,6 +442,31 @@ export default function AdminPage() {
                       </div>
                     </td>
                   </tr>
+                  {expandedRows.has(app.application_id) && (
+                    <tr className="border-b border-white/5 bg-white/2">
+                      <td colSpan={12} className="px-4 pb-3 pt-1">
+                        <div className="pl-5 flex flex-wrap gap-2">
+                          {app.teammates.length === 0 ? (
+                            <span className="text-white/30 text-xs">Solo — no teammates</span>
+                          ) : (
+                            app.teammates.map((tm) => (
+                              <div
+                                key={tm.user_id}
+                                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs"
+                              >
+                                <span className="font-medium text-white">{tm.user_name}</span>
+                                <span className="text-white/40">{tm.user_email}</span>
+                                <Badge variant={statusBadgeVariant(tm.status)}>
+                                  {tm.status ? statusLabel(tm.status) : "No App"}
+                                </Badge>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
