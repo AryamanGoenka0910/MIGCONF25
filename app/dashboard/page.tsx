@@ -692,22 +692,22 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="default"
-                disabled={true}
+                // disabled={true}
                 onClick={() => {
                   if (profileLoading || isApplicationSubmitted) return;
                   setApplicationButtonLoading(true);
                   router.push("/application");
                 }}
               >
-                {/* {applicationStatusLoading
+                {profileLoading
                   ? "Checking…"
                   : isApplicationSubmitted
                     ? "Application Submitted"
                     : applicationButtonLoading
                       ? "Opening…"
                       : "Start Application"}
-                {applicationStatusLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />} */}
-                Applications Are Closed
+                {profileLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />}
+                {/* Applications Are Closed */}
               </Button>
 
               <Button
