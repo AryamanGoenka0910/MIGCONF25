@@ -23,9 +23,10 @@ import { beginSignOut } from "@/lib/signout";
 import { Combobox } from "@headlessui/react";
 import { AvailableUser } from "@/lib/types";
 import { fetchAllUsers } from "@/lib/fetch-all-users";
-import type { InviteUserRow, Invite, User, TeamMember, TeamResponse } from "@/lib/types";
+import type { Invite, User, TeamResponse } from "@/lib/types";
 
 import MessageOverlay from "@/components/MessageOverlay";
+import ScheduleModal from "@/components/ScheduleModal";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -78,6 +79,9 @@ export default function DashboardPage() {
   // Section Toggles
   const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
   const [teamAddSection, setTeamAddSection] = useState(false);
+
+  // Schedule
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   // RSVP
   const [rsvpOpen, setRsvpOpen] = useState(false);
@@ -311,23 +315,6 @@ export default function DashboardPage() {
       return;
     }
 
-    // // Cache user info for the duration of the browser session.
-    // // This avoids refetching /api/user on every Dashboard visit in the same session.
-    // const cacheKey = `migconf.user.v1:${user.id}`;
-    // try {
-    //   const cachedRaw = sessionStorage.getItem(cacheKey);
-    //   if (cachedRaw) {
-    //     const cached = JSON.parse(cachedRaw) as User | null;
-    //     if (cached?.user_id === user.id) {
-    //       setUserInfo(cached);
-    //       setProfileLoading(false);
-    //       return;
-    //     }
-    //   }
-    // } catch {
-    //   // Ignore cache read/parse errors and fall back to network.
-    // }
-
     const controller = new AbortController();
     const run = async () => {
       setProfileLoading(true);
@@ -348,11 +335,6 @@ export default function DashboardPage() {
         }
 
         setUserInfo(userJson as User);
-        // try {
-        //   sessionStorage.setItem(cacheKey, JSON.stringify(userJson as User));
-        // } catch {
-        //   // Ignore cache write errors (quota, privacy mode, etc).
-        // }
 
       } catch {
         if (controller.signal.aborted) return;
@@ -484,7 +466,7 @@ export default function DashboardPage() {
   }, [loading, session?.access_token, user, reloadKeyForInvites]);
 
 
-  if (loading) {
+  if (loading || (profileLoading && !userInfo)) {
     return (
       <main className="relative min-h-screen overflow-hidden">
         <BackgroundGlow />
@@ -496,6 +478,8 @@ export default function DashboardPage() {
       </main>
     );
   }
+
+  if (!user) return null;
 
   const displayNameFromAuth = getUserDisplayName(user);
   const displayName = userInfo?.user_name ?? displayNameFromAuth;
@@ -509,6 +493,163 @@ export default function DashboardPage() {
     { label: "Email", value: userInfo?.user_email ?? user?.email ?? "Unavailable" },
     { label: "Team members", value: profileLoading || teamLoading ? "…" : `${teamMembers.length}` },
   ];
+
+  if (userRole === "Sponsor") {
+    return (
+      <main className="relative min-h-screen overflow-hidden">
+        <BackgroundGlow />
+        <div className="relative mx-auto max-w-6xl px-4 py-12 md:px-6">
+          {/* Header card */}
+          <section className="mt-16 rounded-3xl border border-border bg-card/40 p-8 backdrop-blur animate-fade-in-up opacity-0">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/30 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  Sponsor Dashboard
+                </div>
+                <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
+                  {displayName}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                  Welcome! Use the links below to access the sponsor portal and stay connected.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
+                <Button
+                  size="lg"
+                  variant="default"
+                  onClick={() => router.push("/sponsor-portal")}
+                >
+                  Sponsor Portal <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setScheduleOpen(true)}
+                >
+                  View Schedule
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => beginSignOut(router, { returnTo: "/" })}
+                >
+                  Sign out <LogOut className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background/25 p-5">
+                <div className="text-xs text-muted-foreground">Role</div>
+                <div className="mt-1 font-semibold tracking-tight text-xl">{userRole}</div>
+              </div>
+              <div className="rounded-2xl border border-border bg-background/25 p-5">
+                <div className="text-xs text-muted-foreground">Email</div>
+                <div className="mt-1 font-semibold tracking-tight text-xl wrap-break-word">{userInfo?.user_email ?? user?.email ?? "Unavailable"}</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Discord banner */}
+          <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-indigo-400/10 px-4 py-3 text-sm font-medium text-indigo-100 animate-fade-in-up">
+            <div className="flex flex-row items-center justify-between gap-2">
+              <p>Join our Discord community for updates and announcements.</p>
+              <a
+                href="https://discord.gg/vdv62ZJ9"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-lg border border-indigo-400/30 bg-indigo-400/10 px-3 py-1.5 text-xs font-medium text-indigo-100 hover:bg-indigo-400/20 transition-colors"
+              >
+                Join Discord
+              </a>
+            </div>
+          </div>
+
+          {/* Important Dates + Contact */}
+          <section className="mt-6 grid gap-6 md:grid-cols-2">
+            <GlassCard title="Important Dates">
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-border bg-background/25 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
+                      <CalendarDays className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">Application Deadline</div>
+                      <div className="mt-1 text-sm text-muted-foreground">March 6th, 2026 at 11:59 PM ET</div>
+                      <div className="mt-2 text-xs text-destructive">Deadline has passed</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border bg-background/25 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
+                      <Trophy className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">Competition Event</div>
+                      <div className="mt-1 text-sm text-muted-foreground">March 20th, 2026</div>
+                      <a
+                        href="https://maps.google.com/?q=Ann%20Arbor%2C%20MI"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4"
+                      >
+                        Ann Arbor, MI <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+
+            <GlassCard title="Contact & Support">
+              <div className="mt-5 space-y-4">
+                <div className="flex items-start gap-3 rounded-2xl border border-border bg-background/25 p-4">
+                  <Mail className="mt-0.5 h-5 w-5 text-primary" />
+                  <div>
+                    <div className="text-sm font-semibold">Questions?</div>
+                    <a
+                      href="mailto:mig.quant.board@umich.edu"
+                      className="text-sm text-muted-foreground underline underline-offset-4"
+                    >
+                      mig.quant.board@umich.edu
+                    </a>
+                  </div>
+                </div>
+                <a
+                  href="https://www.linkedin.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 transition hover:bg-background/35"
+                >
+                  <Linkedin className="h-5 w-5 text-primary" />
+                  <div className="text-sm font-semibold">LinkedIn</div>
+                  <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
+                </a>
+                <a
+                  href="https://www.instagram.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 transition hover:bg-background/35"
+                >
+                  <Instagram className="h-5 w-5 text-primary" />
+                  <div className="text-sm font-semibold">Instagram</div>
+                  <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
+                </a>
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
+                  <Clock className="h-5 w-5 text-primary" />
+                  We aim to respond within 48 hours.
+                </div>
+              </div>
+            </GlassCard>
+          </section>
+        </div>
+        <ScheduleModal open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -572,7 +713,7 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => router.push("/")}
+                onClick={() => setScheduleOpen(true)}
               >
                 View Schedule
               </Button>
@@ -1086,6 +1227,8 @@ export default function DashboardPage() {
         <MessageOverlay message={inviteError} onClose={() => setInviteError(null)} />
 
       </div>
+
+      <ScheduleModal open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
 
       {/* RSVP Modal */}
       {rsvpOpen && (

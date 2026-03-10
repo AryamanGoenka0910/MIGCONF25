@@ -67,3 +67,27 @@ export async function requireAdmin(request: Request): Promise<
 
   return { ok: true, user: auth.user };
 }
+
+export async function requireSponsor(request: Request): Promise<
+  | { ok: true; user: SupabaseUser }
+  | { ok: false; response: NextResponse }
+> {
+  const auth = await requireAuthUser(request);
+  if (!auth.ok) return { ok: false, response: auth.response };
+
+  const { data: userData, error: userError } = await supabaseAdmin
+    .from("Users")
+    .select("role")
+    .eq("user_id", auth.user.id)
+    .single();
+
+  if (userError || !userData) {
+    return { ok: false, response: jsonError(403, "Forbidden.") };
+  }
+
+  if (userData.role !== "Sponsor" && userData.role !== "Admin") {
+    return { ok: false, response: jsonError(403, "Forbidden.") };
+  }
+
+  return { ok: true, user: auth.user };
+}
