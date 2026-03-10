@@ -63,7 +63,7 @@ type AdminTeammate = {
   user_id: string;
   user_name: string;
   user_email: string;
-  status: "app_submitted" | "app_accepted" | "app_rejected" | null;
+  status: "app_submitted" | "app_accepted" | "app_rejected" | "rsvp_confirmed" | null;
 };
 
 type AdminApplication = {
@@ -78,7 +78,7 @@ type AdminApplication = {
   travel_reimbursement: boolean;
   trading_experience: boolean;
   submitted_at: string | null;
-  status: "app_submitted" | "app_accepted" | "app_rejected" | null;
+  status: "app_submitted" | "app_accepted" | "app_rejected" | "rsvp_confirmed" | null;
   travel_budget: number;
   team_id: number | null;
   teammates: AdminTeammate[];

@@ -10,7 +10,7 @@ import { ChevronDown } from "lucide-react";
 import type { AdminApplication } from "@/lib/types";
 
 type AccessState = "loading" | "denied" | "granted";
-type StatusFilter = "all" | "app_submitted" | "app_accepted" | "app_rejected" | "none";
+type StatusFilter = "all" | "app_submitted" | "app_accepted" | "app_rejected" | "rsvp_confirmed" | "none";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -22,6 +22,7 @@ const statusBadgeVariant = (
   if (status === "app_accepted") return "default";
   if (status === "app_rejected") return "destructive";
   if (status === "app_submitted") return "outline";
+  if (status === "rsvp_confirmed") return "default";
   return "secondary";
 };
 
@@ -29,6 +30,7 @@ const statusLabel = (status: AdminApplication["status"]): string => {
   if (status === "app_submitted") return "Submitted";
   if (status === "app_accepted") return "Accepted";
   if (status === "app_rejected") return "Rejected";
+  if (status === "rsvp_confirmed") return "RSVP Confirmed";
   return "—";
 };
 
@@ -37,6 +39,7 @@ const FILTER_LABELS: { value: StatusFilter; label: string }[] = [
   { value: "app_submitted", label: "Submitted" },
   { value: "app_accepted", label: "Accepted" },
   { value: "app_rejected", label: "Rejected" },
+  { value: "rsvp_confirmed", label: "RSVP Confirmed" },
   { value: "none", label: "No Status" },
 ];
 
@@ -49,8 +52,6 @@ export default function AdminPage() {
   const [appsLoading, setAppsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [resumeLoading, setResumeLoading] = useState<Record<string, boolean>>({});
-  const [budgetInputs, setBudgetInputs] = useState<Record<string, string>>({});
-  const [budgetLoading, setBudgetLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const hasFetched = useRef(false);
@@ -108,13 +109,6 @@ export default function AdminPage() {
       }
       const data = (await res.json()) as AdminApplication[];
       setApplications(data);
-
-      // Seed budget inputs with current values
-      const inputs: Record<string, string> = {};
-      for (const app of data) {
-        inputs[app.application_id] = String(app.travel_budget ?? 0);
-      }
-      setBudgetInputs(inputs);
     } catch {
       setError("Failed to load applications.");
     } finally {
@@ -175,38 +169,6 @@ export default function AdminPage() {
     }
   };
 
-  const saveBudget = async (userId: string, appId: string) => {
-    if (!session) return;
-    const raw = budgetInputs[appId] ?? "0";
-    const value = parseFloat(raw);
-    if (isNaN(value) || value < 0) {
-      setError("Travel budget must be a non-negative number.");
-      return;
-    }
-    setBudgetLoading((prev) => ({ ...prev, [appId]: true }));
-    try {
-      const res = await fetch("/api/admin_routes/travel-budget", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ user_id: userId, travel_budget: value }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError((body as { error?: string }).error ?? "Failed to update budget.");
-        return;
-      }
-      setApplications((prev) =>
-        prev.map((a) => (a.user_id === userId ? { ...a, travel_budget: value } : a))
-      );
-    } catch {
-      setError("Failed to update budget.");
-    } finally {
-      setBudgetLoading((prev) => ({ ...prev, [appId]: false }));
-    }
-  };
 
   const viewResume = async (app: AdminApplication) => {
     if (!session) return;
@@ -317,7 +279,6 @@ export default function AdminPage() {
                   <th className="px-4 py-3 text-left">Submitted</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Resume</th>
-                  <th className="px-4 py-3 text-left">Travel Budget</th>
                   <th className="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
@@ -383,45 +344,12 @@ export default function AdminPage() {
                         {resumeLoading[app.application_id] ? "Loading…" : "View Resume"}
                       </Button>
                     </td>
-                    {/* Travel Budget */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={budgetInputs[app.application_id] ?? "0"}
-                          onChange={(e) =>
-                            setBudgetInputs((prev) => ({
-                              ...prev,
-                              [app.application_id]: e.target.value,
-                            }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveBudget(app.user_id, app.application_id);
-                          }}
-                          className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none focus:border-white/25"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={budgetLoading[app.application_id]}
-                          onClick={() => saveBudget(app.user_id, app.application_id)}
-                          className="text-xs border-white/20 text-white/70 hover:text-white hover:bg-white/10 px-2"
-                        >
-                          {budgetLoading[app.application_id] ? "…" : "Set"}
-                        </Button>
-                        <span className="text-white/50 text-xs whitespace-nowrap">
-                          ${app.travel_budget}
-                        </span>
-                      </div>
-                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           disabled={
-                            app.status === "app_accepted" || actionLoading[app.application_id]
+                            app.status === "app_accepted" || app.status === "rsvp_confirmed" || actionLoading[app.application_id]
                           }
                           onClick={() => updateStatus(app.user_id, app.application_id, "app_accepted")}
                           className="text-xs bg-emerald-600/80 hover:bg-emerald-600 text-white border-0 whitespace-nowrap"
@@ -432,7 +360,7 @@ export default function AdminPage() {
                           size="sm"
                           variant="destructive"
                           disabled={
-                            app.status === "app_rejected" || actionLoading[app.application_id]
+                            app.status === "app_rejected" || app.status === "rsvp_confirmed" || actionLoading[app.application_id]
                           }
                           onClick={() => updateStatus(app.user_id, app.application_id, "app_rejected")}
                           className="text-xs whitespace-nowrap"

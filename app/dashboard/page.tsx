@@ -609,6 +609,22 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {(userInfo?.status === "app_accepted" || userInfo?.status === "rsvp_confirmed") && (
+          <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-indigo-400/10 px-4 py-3 text-sm font-medium text-indigo-100 animate-fade-in-up">
+            <div className="flex flex-row items-center justify-between gap-2">
+              <p>You&apos;re in! Join our Discord community for updates and announcements.</p>
+              <a
+                href="https://discord.gg/vdv62ZJ9"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-lg border border-indigo-400/30 bg-indigo-400/10 px-3 py-1.5 text-xs font-medium text-indigo-100 hover:bg-indigo-400/20 transition-colors"
+              >
+                Join Discord
+              </a>
+            </div>
+          </div>
+        )}
+
         <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 animate-fade-in-up">
           <div className="flex flex-row items-center justify-between gap-2">
             <p>PLEASE READ: click the info button for team formation guidelines.</p>
