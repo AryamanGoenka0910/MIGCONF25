@@ -1,9 +1,6 @@
 "use client";
 
-//TODO FIX TYPES
-//Check Team Capacity (max 4 people)
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 import {
@@ -26,40 +23,28 @@ import { beginSignOut } from "@/lib/signout";
 import { Combobox } from "@headlessui/react";
 import { AvailableUser } from "@/lib/types";
 import { fetchAllUsers } from "@/lib/fetch-all-users";
-import type { InviteUserRow, Invite, User } from "@/lib/types";
+import type { InviteUserRow, Invite, User, TeamMember, TeamResponse } from "@/lib/types";
 
 import MessageOverlay from "@/components/MessageOverlay";
-
-
-type ApplicationStatus = "not_started" | "submitted";
-
-type TeamResponse = {
-  team:
-    | null
-    | {
-        team_id: number;
-        members: {
-          user_id: string;
-          user_email: string;
-          user_name: string;
-          team_id: number | null;
-          status: "confirmed" | "pending_application" | "pending_invite";
-        }[];
-      };
-};
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const statusStyles: Record<ApplicationStatus, string> = {
-  not_started: "border-destructive/25 bg-destructive/10 text-destructive-foreground",
-  submitted: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+const statusStyles: Record<string, string> = {
+  "not_started": "border-destructive/25 bg-destructive/10 text-destructive-foreground",
+  "app_submitted": "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+  "app_accepted": "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+  "app_rejected": "border-destructive/25 bg-destructive/10 text-destructive-foreground",
+  "rsvp_confirmed": "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
 };
 
-const statusLabels: Record<ApplicationStatus, string> = {
-  not_started: "Not Started",
-  submitted: "Submitted",
+const statusLabels: Record<string, string> = {
+  "not_started": "Not started",
+  "app_submitted": "Submitted",
+  "app_accepted": "Accepted",
+  "app_rejected": "Rejected",
+  "rsvp_confirmed": "RSVP Confirmed",
 };
 
 export default function DashboardPage() {
@@ -70,8 +55,6 @@ export default function DashboardPage() {
   const [reloadKeyForTeam, setReloadKeyForTeam] = useState<number>(0);
 
   // User Application Info
-  const [applicationStatus, setApplicationStatus] = useState<ApplicationStatus>("not_started");
-  const [applicationStatusLoading, setApplicationStatusLoading] = useState(false);
   const [applicationButtonLoading, setApplicationButtonLoading] = useState(false);
 
   // Profile Info
@@ -95,6 +78,15 @@ export default function DashboardPage() {
   // Section Toggles
   const [teammateInfoOpen, setTeammateInfoOpen] = useState(false);
   const [teamAddSection, setTeamAddSection] = useState(false);
+
+  // RSVP
+  const [rsvpOpen, setRsvpOpen] = useState(false);
+  const [rsvpFiles, setRsvpFiles] = useState<File[]>([]);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [rsvpDone, setRsvpDone] = useState(false);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /////ADDING TEAM MEMBERS\\\\\\
 
@@ -259,6 +251,32 @@ export default function DashboardPage() {
     setAcceptingInviteLoading((prev) => ({ ...prev, [inviteId]: false }));
   };
 
+  const submitRsvp = async () => {
+    if (!session) return;
+    setRsvpLoading(true);
+    setRsvpError(null);
+    try {
+      const formData = new FormData();
+      rsvpFiles.forEach((f) => formData.append("screenshots", f));
+      const res = await fetch("/api/user_routes/rsvp", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setRsvpError((body as { error?: string }).error ?? "Failed to RSVP.");
+        return;
+      }
+      setRsvpDone(true);
+      setUserInfo((prev) => (prev ? { ...prev, status: "rsvp_confirmed" } : prev));
+    } catch {
+      setRsvpError("Something went wrong. Please try again.");
+    } finally {
+      setRsvpLoading(false);
+    }
+  };
+
   const leaveTeam = async () => {
     const token = session?.access_token;
     if (!token || !teamInfo?.team?.team_id) return;
@@ -293,22 +311,22 @@ export default function DashboardPage() {
       return;
     }
 
-    // Cache user info for the duration of the browser session.
-    // This avoids refetching /api/user on every Dashboard visit in the same session.
-    const cacheKey = `migconf.user.v1:${user.id}`;
-    try {
-      const cachedRaw = sessionStorage.getItem(cacheKey);
-      if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw) as User | null;
-        if (cached?.user_id === user.id) {
-          setUserInfo(cached);
-          setProfileLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Ignore cache read/parse errors and fall back to network.
-    }
+    // // Cache user info for the duration of the browser session.
+    // // This avoids refetching /api/user on every Dashboard visit in the same session.
+    // const cacheKey = `migconf.user.v1:${user.id}`;
+    // try {
+    //   const cachedRaw = sessionStorage.getItem(cacheKey);
+    //   if (cachedRaw) {
+    //     const cached = JSON.parse(cachedRaw) as User | null;
+    //     if (cached?.user_id === user.id) {
+    //       setUserInfo(cached);
+    //       setProfileLoading(false);
+    //       return;
+    //     }
+    //   }
+    // } catch {
+    //   // Ignore cache read/parse errors and fall back to network.
+    // }
 
     const controller = new AbortController();
     const run = async () => {
@@ -322,6 +340,7 @@ export default function DashboardPage() {
         
         const userJson = (await userRes.json()) as Partial<User> & { error?: string };
 
+        console.log(userJson);
         if (!userRes.ok) {
           setUserInfo(null);
           setProfileLoading(false);
@@ -329,11 +348,11 @@ export default function DashboardPage() {
         }
 
         setUserInfo(userJson as User);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(userJson as User));
-        } catch {
-          // Ignore cache write errors (quota, privacy mode, etc).
-        }
+        // try {
+        //   sessionStorage.setItem(cacheKey, JSON.stringify(userJson as User));
+        // } catch {
+        //   // Ignore cache write errors (quota, privacy mode, etc).
+        // }
 
       } catch {
         if (controller.signal.aborted) return;
@@ -347,82 +366,6 @@ export default function DashboardPage() {
 
     void run();
     return () => controller.abort();
-  }, [loading, session?.access_token, user]);
-
-  // Resolve and cache application submission status to drive dashboard CTA state.
-  useEffect(() => {
-    const token = session?.access_token;
-    if (loading || !token || !user) {
-      setApplicationStatus("not_started");
-      setApplicationStatusLoading(false);
-      return;
-    };
-
-    const cacheKey = `migconf.application-submitted.v1:${user.id}`;
-    const cachedSubmitted = (() => {
-      try {
-        const cachedRaw = sessionStorage.getItem(cacheKey);
-        if (cachedRaw){
-          const cached = JSON.parse(cachedRaw) as { submitted?: unknown } | boolean;
-          if (typeof cached === "boolean") return cached;
-          return typeof cached?.submitted === "boolean" ? cached.submitted : null;
-        } 
-        return null;
-      } catch {
-        return null;
-      }
-    })();
-
-    // Set initial UI from cache.
-    if (cachedSubmitted !== null) {
-      setApplicationStatus(cachedSubmitted ? "submitted" : "not_started");
-      setApplicationStatusLoading(false);
-    } else {
-      setApplicationStatusLoading(true);
-    }
-
-    // If we already know it's submitted in this session, it won't revert — skip the request.
-    if (cachedSubmitted === true) return;
-
-    const controller = new AbortController();
-    const run = async () => {
-      try {
-        const appRes = await fetch("/api/application_routes/application-info", {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        });
-        
-        const appJson = (await appRes.json()) as { submitted?: boolean; error?: string };
-        const submitted = !!appJson.submitted;
-        
-        if (!appRes.ok) {
-          setApplicationStatus("not_started");
-          setApplicationStatusLoading(false);
-          return;
-        }
-
-        setApplicationStatus(submitted ? "submitted" : "not_started");
-
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify({ submitted }));
-        } catch {
-          // Ignore cache write errors.
-        }
-
-      } catch {
-        if (controller.signal.aborted) return;
-      } finally {
-        if (!controller.signal.aborted) {
-          setApplicationStatusLoading(false);
-        }
-      }
-    };
-
-    const t = setTimeout(() => void run(), 0);
-    return () => {
-      clearTimeout(t);
-      controller.abort();
-    };
   }, [loading, session?.access_token, user]);
 
   // Load and cache team details after profile data confirms a team association.
@@ -443,24 +386,6 @@ export default function DashboardPage() {
       setTeamLoading(false);
       return;
     }
-
-    // // Cache team info for the duration of the browser session (only for users with a team).
-    // // This avoids refetching /api/team on every Dashboard visit in the same session.
-    // const cacheKey = `migconf.team.v1:${user.id}`;
-    // try {
-    //   const cachedRaw = sessionStorage.getItem(cacheKey);
-    //   if (cachedRaw) {
-    //     const cached = JSON.parse(cachedRaw) as { team: TeamResponse["team"] } | null;
-    //     if (cached?.team && cached.team.team_id === teamId) {
-    //       setTeamInfo({ team: cached.team });
-    //       setTeamError(null);
-    //       setTeamLoading(false);
-    //       return;
-    //     }
-    //   }
-    // } catch {
-    //   // Ignore cache read/parse errors and fall back to network.
-    // }
 
     const controller = new AbortController();
     const run = async () => {
@@ -483,13 +408,6 @@ export default function DashboardPage() {
         }
 
         setTeamInfo(teamJson as TeamResponse);
-        // try {
-        //   if ((teamJson as TeamResponse)?.team) {
-        //     sessionStorage.setItem(cacheKey, JSON.stringify({ team: (teamJson as TeamResponse).team }));
-        //   }
-        // } catch {
-        //   // Ignore cache write errors (quota, privacy mode, etc).
-        // }
       } catch {
         if (controller.signal.aborted) return;
         setTeamInfo({ team: null });
@@ -508,7 +426,6 @@ export default function DashboardPage() {
       controller.abort();
     };
   }, [loading, profileLoading, session?.access_token, user, userInfo?.team_id, reloadKeyForTeam]);
-
 
   useEffect(() => {
     const token = session?.access_token;
@@ -584,8 +501,8 @@ export default function DashboardPage() {
   const displayName = userInfo?.user_name ?? displayNameFromAuth;
   const teamMembers = teamInfo?.team?.members ?? [];
   const userRole = userInfo?.role ?? "Attendee";
-
-  const isApplicationSubmitted = applicationStatus === "submitted";
+  const isApplicationSubmitted = userInfo?.status === "app_submitted";
+  const isEligbleForTeam = ["app_submitted", "app_accepted", "rsvp_confirmed"].includes(userInfo?.status ?? "not_started");
 
   const quickStats = [
     { label: "Role", value: userRole },
@@ -600,8 +517,8 @@ export default function DashboardPage() {
       <div className="relative mx-auto max-w-6xl px-4 py-12 md:px-6">
         {/* Top header card */}
         <section className="mt-16 rounded-3xl border border-border bg-card/40 p-8 backdrop-blur animate-fade-in-up opacity-0">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/30 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                 Dashboard
@@ -619,24 +536,24 @@ export default function DashboardPage() {
                 <span
                   className={cn(
                     "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
-                    applicationStatusLoading
+                    profileLoading
                       ? "border-border bg-background/30 text-muted-foreground"
-                      : statusStyles[applicationStatus]
+                      : (userInfo?.status ? statusStyles[userInfo?.status] : statusStyles["not_started"])
                   )}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-                  {applicationStatusLoading ? "Checking application…" : statusLabels[applicationStatus]}
+                  {profileLoading ? "Checking application…" : userInfo?.status ? statusLabels[userInfo?.status] : statusLabels["not_started"]}
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
               <Button
                 size="lg"
                 variant="default"
                 disabled={true}
                 onClick={() => {
-                  if (applicationStatusLoading || isApplicationSubmitted) return;
+                  if (profileLoading || isApplicationSubmitted) return;
                   setApplicationButtonLoading(true);
                   router.push("/application");
                 }}
@@ -649,7 +566,7 @@ export default function DashboardPage() {
                       ? "Opening…"
                       : "Start Application"}
                 {applicationStatusLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />} */}
-                Application Deadline Has Passed
+                Applications Are Closed
               </Button>
 
               <Button
@@ -659,6 +576,17 @@ export default function DashboardPage() {
               >
                 View Schedule
               </Button>
+
+              {isEligbleForTeam && (
+                <Button
+                  size="lg"
+                  variant="default"
+                  onClick={() => setRsvpOpen(true)}
+                  disabled={userInfo?.status === "rsvp_confirmed"}
+                >
+                  RSVP
+                </Button>
+              )}
 
               <Button
                 size="lg"
@@ -695,7 +623,7 @@ export default function DashboardPage() {
           {/* Invites */}
           <GlassCard 
             title="Team Invites"
-            applicationStatus={applicationStatus}
+            applicationStatus={isEligbleForTeam}
             teamAdd={true}
             setTeamAddSection={setTeamAddSection}
           >
@@ -802,7 +730,7 @@ export default function DashboardPage() {
           <GlassCard
             title="Team"
             teamAdd={true}
-            applicationStatus={applicationStatus}
+            applicationStatus={isEligbleForTeam}
             setTeamAddSection={setTeamAddSection}
           >
             {profileLoading || teamLoading ? (
@@ -831,12 +759,16 @@ export default function DashboardPage() {
                       <span
                         className={cn(
                           "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium",
-                          m.status === "confirmed"
-                            ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-100"
-                            : "border-amber-400/20 bg-amber-400/10 text-amber-100"
+                          m.status === "accepted" && "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+                          m.status === "rsvped" && "border-blue-400/20 bg-blue-400/10 text-blue-100",
+                          m.status === "rejected" && "border-red-400/20 bg-red-400/10 text-red-200",
+                          m.status === "pending" && "border-amber-400/20 bg-amber-400/10 text-amber-100"
                         )}
                       >
-                        {m.status === "confirmed" ? "Confirmed" : "Pending Application"}
+                        {m.status === "accepted" && "Accepted"}
+                        {m.status === "rsvped" && "RSVP'd"}
+                        {m.status === "rejected" && "Rejected"}
+                        {m.status === "pending" && "Pending"}
                       </span>
                     </div>
                   </TeamRow>
@@ -1136,8 +1068,110 @@ export default function DashboardPage() {
         )}
                 
         <MessageOverlay message={inviteError} onClose={() => setInviteError(null)} />
-        
+
       </div>
+
+      {/* RSVP Modal */}
+      {rsvpOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) { setRsvpOpen(false); setRsvpFiles([]); setRsvpError(null); } }}
+        >
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card/90 p-8 backdrop-blur shadow-2xl">
+            {rsvpDone ? (
+              <div className="text-center space-y-4">
+                <div className="text-4xl">🎉</div>
+                <h2 className="text-xl font-semibold">You&apos;re in!</h2>
+                <p className="text-sm text-muted-foreground">Your RSVP has been confirmed. See you at the conference!</p>
+                <Button size="lg" className="w-full" onClick={() => { setRsvpOpen(false); }}>
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold">RSVP to MIG Quant Conference</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  If you&apos;re requesting flight reimbursement, drop your screenshots below. Then click RSVP to confirm your attendance.
+                </p>
+
+                {/* File drop zone */}
+                <div
+                  className={cn(
+                    "mt-5 rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors",
+                    isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50 hover:bg-background/30"
+                  )}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+                    setRsvpFiles((prev) => [...prev, ...dropped]);
+                  }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.files ?? []);
+                      setRsvpFiles((prev) => [...prev, ...selected]);
+                      e.target.value = "";
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {isDragging ? "Drop files here" : "Click or drag screenshots here"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/60">Images only (optional)</p>
+                </div>
+
+                {/* File list */}
+                {rsvpFiles.length > 0 && (
+                  <ul className="mt-3 space-y-1">
+                    {rsvpFiles.map((f, i) => (
+                      <li key={i} className="flex items-center justify-between rounded-lg border border-border bg-background/25 px-3 py-2 text-xs">
+                        <span className="truncate text-foreground">{f.name}</span>
+                        <button
+                          className="ml-3 shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => setRsvpFiles((prev) => prev.filter((_, j) => j !== i))}
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {rsvpError && (
+                  <p className="mt-3 text-sm text-destructive">{rsvpError}</p>
+                )}
+
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => { setRsvpOpen(false); setRsvpFiles([]); setRsvpError(null); }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="flex-1"
+                    disabled={rsvpLoading}
+                    onClick={submitRsvp}
+                  >
+                    {rsvpLoading ? "Submitting…" : "RSVP to the Conference"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -1146,13 +1180,13 @@ function GlassCard({
   title,
   children,
   teamAdd = false,
-  applicationStatus = "not_started",
+  applicationStatus = false,
   setTeamAddSection,
 }: {
   title: string;
   children: React.ReactNode;
   teamAdd?: boolean;
-  applicationStatus?: ApplicationStatus;
+  applicationStatus?: boolean;
   setTeamAddSection?: (open: boolean) => void;
 }) {
   return (
@@ -1173,7 +1207,7 @@ function GlassCard({
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{title}</div>
           </div>
-          {(teamAdd && applicationStatus === "submitted") && (
+          {(teamAdd && applicationStatus) && (
             <Button variant="outline" onClick={() => setTeamAddSection?.(true)}>
               <PlusIcon className="h-4 w-4" />
             </Button>

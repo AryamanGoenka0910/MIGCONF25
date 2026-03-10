@@ -41,6 +41,24 @@ type Invite = {
 };
 
 
+type TeamMemberStatus = "accepted" | "rejected" | "rsvped" | "pending";
+
+type TeamMember = {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  team_id: number | null;
+  role: string;
+  status: TeamMemberStatus;
+};
+
+type TeamResponse = {
+  team: {
+    team_id: number;
+    members: TeamMember[];
+  } | null;
+};
+
 type AdminTeammate = {
   user_id: string;
   user_name: string;
@@ -66,4 +84,4 @@ type AdminApplication = {
   teammates: AdminTeammate[];
 };
 
-export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication, AdminTeammate };
+export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication, AdminTeammate, TeamMemberStatus, TeamMember, TeamResponse };

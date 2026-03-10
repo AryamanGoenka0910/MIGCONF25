@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireAuthUser } from "@/app/api/_utils";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { User } from "@/lib/types";
+import type { TeamMember, TeamMemberStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-type MemberApplicationStatus = "confirmed" | "pending";
-type TeamMember = User & { status: MemberApplicationStatus };
+function toMemberStatus(status: string | null): TeamMemberStatus {
+  if (status === "app_accepted") return "accepted";
+  if (status === "app_rejected") return "rejected";
+  if (status === "rsvp_confirmed") return "rsvped";
+  return "pending";
+}
 
 export async function GET(request: Request) {
   const auth = await requireAuthUser(request);
@@ -32,7 +36,7 @@ export async function GET(request: Request) {
 
   const { data: memberRows, error: membersError } = await supabaseAdmin
     .from("Users")
-    .select("user_id, user_email, user_name, team_id, role")
+    .select("user_id, user_email, user_name, team_id, role, status")
     .eq("team_id", teamId)
     .order("user_name", { ascending: true });
 
@@ -40,31 +44,10 @@ export async function GET(request: Request) {
     return jsonError(500, `Failed to load team members: ${membersError.message}`);
   }
 
-  const members = (memberRows ?? []) as unknown as User[];
-
-  const memberIds = members.map((m) => m.user_id);
-  let submittedUserIds = new Set<string>();
-
-  if (memberIds.length > 0) {
-    const { data: applicationRows, error: applicationError } = await supabaseAdmin
-      .from("Applications")
-      .select("user_id, submitted_at")
-      .in("user_id", memberIds);
-
-    if (applicationError) {
-      return jsonError(500, `Failed to load team applications: ${applicationError.message}`);
-    }
-
-    const rows = (applicationRows ?? []) as unknown as { user_id: string; submitted_at: string | null }[];
-    submittedUserIds = new Set(rows.filter((r) => !!r.submitted_at).map((r) => r.user_id));
-  }
-
-  const membersWithStatus: TeamMember[] = members.map((m) => {
-    return {
-      ...m,
-      status: submittedUserIds.has(m.user_id) ? "confirmed" : "pending",
-    };
-  });
+  const membersWithStatus: TeamMember[] = (memberRows ?? []).map((m) => ({
+    ...m,
+    status: toMemberStatus(m.status ?? null),
+  }));
 
   return NextResponse.json(
     {
@@ -76,4 +59,3 @@ export async function GET(request: Request) {
     { status: 200, headers: { "Cache-Control": "no-store" } }
   );
 }
-

@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   const { data: userRow, error: userError } = await supabaseAdmin
     .from("Users")
-    .select("user_id, user_email, user_name, team_id, role")
+    .select("user_id, user_name, user_email, team_id, role, status, travel_budget")
     .eq("user_id", auth.user.id)
     .maybeSingle();
 

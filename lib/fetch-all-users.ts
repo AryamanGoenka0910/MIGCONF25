@@ -26,7 +26,7 @@ export async function fetchAllUsers({
   }
 
   try {
-    const res = await fetch("/api/user_routes/user-directory?includeTeamed=" + (includeTeamed ?? "false"), {
+    const res = await fetch("/api/user_routes/user-directory", {
       headers: { Authorization: `Bearer ${token}` },
       signal,
     });
@@ -38,6 +38,7 @@ export async function fetchAllUsers({
 
     const json = (await res.json()) as { users?: AvailableUser[] };
     const allUsers = Array.isArray(json.users) ? json.users : [];
+    console.log("Fetched users:", allUsers.length);
     setUsers(currentUserId ? allUsers.filter((u) => u.id !== currentUserId) : allUsers);
   } catch (err) {
     // ignore cancellation errors
