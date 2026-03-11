@@ -1004,7 +1004,7 @@ export default function DashboardPage() {
               </div>
 
               <a
-                href="https://www.linkedin.com"
+                href="https://www.linkedin.com/company/michigan-investment-group/"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 transition hover:bg-background/35"
@@ -1015,7 +1015,7 @@ export default function DashboardPage() {
               </a>
 
               <a
-                href="https://www.instagram.com"
+                href="https://www.instagram.com/mig_umich/"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 transition hover:bg-background/35"
