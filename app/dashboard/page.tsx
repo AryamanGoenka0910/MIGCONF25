@@ -746,7 +746,7 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="default"
-                disabled={true}
+                // disabled={true}
                 onClick={() => {
                   if (profileLoading || isApplicationSubmitted) return;
                   setApplicationButtonLoading(true);
