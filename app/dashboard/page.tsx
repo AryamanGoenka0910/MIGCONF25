@@ -85,10 +85,18 @@ export default function DashboardPage() {
 
   // RSVP
   const [rsvpOpen, setRsvpOpen] = useState(false);
-  const [rsvpFiles, setRsvpFiles] = useState<File[]>([]);
   const [rsvpLoading, setRsvpLoading] = useState(false);
-  const [rsvpDone, setRsvpDone] = useState(false);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const [unRsvpOpen, setUnRsvpOpen] = useState(false);
+  const [unRsvpLoading, setUnRsvpLoading] = useState(false);
+  const [unRsvpError, setUnRsvpError] = useState<string | null>(null);
+
+  // Reimbursement
+  const [reimbursementOpen, setReimbursementOpen] = useState(false);
+  const [reimbursementFiles, setReimbursementFiles] = useState<File[]>([]);
+  const [reimbursementLoading, setReimbursementLoading] = useState(false);
+  const [reimbursementDone, setReimbursementDone] = useState(false);
+  const [reimbursementError, setReimbursementError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -260,24 +268,70 @@ export default function DashboardPage() {
     setRsvpLoading(true);
     setRsvpError(null);
     try {
-      const formData = new FormData();
-      rsvpFiles.forEach((f) => formData.append("screenshots", f));
       const res = await fetch("/api/user_routes/rsvp", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
-        body: formData,
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setRsvpError((body as { error?: string }).error ?? "Failed to RSVP.");
         return;
       }
-      setRsvpDone(true);
+      setRsvpOpen(false);
       setUserInfo((prev) => (prev ? { ...prev, status: "rsvp_confirmed" } : prev));
     } catch {
       setRsvpError("Something went wrong. Please try again.");
     } finally {
       setRsvpLoading(false);
+    }
+  };
+
+  const unRsvp = async () => {
+    if (!session) return;
+    setUnRsvpLoading(true);
+    setUnRsvpError(null);
+    try {
+      const res = await fetch("/api/user_routes/rsvp", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setUnRsvpError((body as { error?: string }).error ?? "Failed to un-RSVP.");
+        return;
+      }
+      setUnRsvpOpen(false);
+      setUserInfo((prev) => (prev ? { ...prev, status: "app_rejected" } : prev));
+    } catch {
+      setUnRsvpError("Something went wrong. Please try again.");
+    } finally {
+      setUnRsvpLoading(false);
+    }
+  };
+
+  const submitReimbursement = async () => {
+    if (!session) return;
+    setReimbursementLoading(true);
+    setReimbursementError(null);
+    try {
+      const formData = new FormData();
+      reimbursementFiles.forEach((f) => formData.append("screenshots", f));
+      const res = await fetch("/api/user_routes/reimbursement", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setReimbursementError((body as { error?: string }).error ?? "Failed to submit.");
+        return;
+      }
+      setReimbursementDone(true);
+      setReimbursementFiles([]);
+    } catch {
+      setReimbursementError("Something went wrong. Please try again.");
+    } finally {
+      setReimbursementLoading(false);
     }
   };
 
@@ -699,15 +753,15 @@ export default function DashboardPage() {
                   router.push("/application");
                 }}
               >
-                {/* {profileLoading
+                {profileLoading
                   ? "Checking…"
                   : isApplicationSubmitted
                     ? "Application Submitted"
                     : applicationButtonLoading
                       ? "Opening…"
                       : "Start Application"}
-                {profileLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />} */}
-                Applications Are Closed
+                {profileLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />}
+                {/* Applications Are Closed */}
               </Button>
 
               <Button
@@ -719,14 +773,23 @@ export default function DashboardPage() {
               </Button>
 
               {isEligbleForTeam && (
-                <Button
-                  size="lg"
-                  variant="default"
-                  onClick={() => setRsvpOpen(true)}
-                  disabled={userInfo?.status === "rsvp_confirmed"}
-                >
-                  RSVP
-                </Button>
+                userInfo?.status === "rsvp_confirmed" ? (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => setUnRsvpOpen(true)}
+                  >
+                    Un-RSVP
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    variant="default"
+                    onClick={() => setRsvpOpen(true)}
+                  >
+                    RSVP
+                  </Button>
+                )
               )}
 
               <Button
@@ -762,6 +825,20 @@ export default function DashboardPage() {
               >
                 Join Discord
               </a>
+            </div>
+          </div>
+        )}
+
+        {userInfo?.status === "rsvp_confirmed" && (
+          <div className="mt-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 animate-fade-in-up">
+            <div className="flex flex-row items-center justify-between gap-2">
+              <p>Need to submit travel reimbursements? Upload your receipts here.</p>
+              <button
+                onClick={() => setReimbursementOpen(true)}
+                className="shrink-0 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-400/20 transition-colors"
+              >
+                Submit Reimbursements
+              </button>
             </div>
           </div>
         )}
@@ -1230,27 +1307,104 @@ export default function DashboardPage() {
 
       <ScheduleModal open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
 
+      {/* Un-RSVP Confirmation Modal */}
+      {unRsvpOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) { setUnRsvpOpen(false); setUnRsvpError(null); } }}
+        >
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card/90 p-8 backdrop-blur shadow-2xl">
+            <h2 className="text-xl font-semibold">Cancel your RSVP?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This will remove your confirmed spot at the MIG Quant Conference. You will not be able to re-RSVP.
+            </p>
+
+            {unRsvpError && (
+              <p className="mt-3 text-sm text-destructive">{unRsvpError}</p>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setUnRsvpOpen(false); setUnRsvpError(null); }}
+              >
+                Keep RSVP
+              </Button>
+              <Button
+                size="lg"
+                variant="destructive"
+                className="flex-1"
+                disabled={unRsvpLoading}
+                onClick={unRsvp}
+              >
+                {unRsvpLoading ? "Removing…" : "Cancel RSVP"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* RSVP Modal */}
       {rsvpOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-          onClick={(e) => { if (e.target === e.currentTarget) { setRsvpOpen(false); setRsvpFiles([]); setRsvpError(null); } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setRsvpOpen(false); setRsvpError(null); } }}
         >
           <div className="w-full max-w-md rounded-3xl border border-border bg-card/90 p-8 backdrop-blur shadow-2xl">
-            {rsvpDone ? (
+            <h2 className="text-xl font-semibold">RSVP to MIG Quant Conference</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Confirm your attendance at the MIG Quant Conference on March 20th, 2026 in Ann Arbor, MI.
+            </p>
+
+            {rsvpError && (
+              <p className="mt-3 text-sm text-destructive">{rsvpError}</p>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setRsvpOpen(false); setRsvpError(null); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={rsvpLoading}
+                onClick={submitRsvp}
+              >
+                {rsvpLoading ? "Confirming…" : "Confirm RSVP"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reimbursement Modal */}
+      {reimbursementOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) { setReimbursementOpen(false); setReimbursementFiles([]); setReimbursementError(null); setReimbursementDone(false); } }}
+        >
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card/90 p-8 backdrop-blur shadow-2xl">
+            {reimbursementDone ? (
               <div className="text-center space-y-4">
-                <div className="text-4xl">🎉</div>
-                <h2 className="text-xl font-semibold">You&apos;re in!</h2>
-                <p className="text-sm text-muted-foreground">Your RSVP has been confirmed. See you at the conference!</p>
-                <Button size="lg" className="w-full" onClick={() => { setRsvpOpen(false); }}>
+                <div className="text-4xl">✅</div>
+                <h2 className="text-xl font-semibold">Submitted!</h2>
+                <p className="text-sm text-muted-foreground">Your reimbursement request has been received.</p>
+                <Button size="lg" className="w-full" onClick={() => { setReimbursementOpen(false); setReimbursementDone(false); }}>
                   Close
                 </Button>
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-semibold">RSVP to MIG Quant Conference</h2>
+                <h2 className="text-xl font-semibold">Submit Reimbursements</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  If you&apos;re requesting flight reimbursement, drop your screenshots below. Then click RSVP to confirm your attendance.
+                  Upload screenshots of your travel receipts for reimbursement.
                 </p>
 
                 {/* File drop zone */}
@@ -1266,7 +1420,7 @@ export default function DashboardPage() {
                     e.preventDefault();
                     setIsDragging(false);
                     const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
-                    setRsvpFiles((prev) => [...prev, ...dropped]);
+                    setReimbursementFiles((prev) => [...prev, ...dropped]);
                   }}
                 >
                   <input
@@ -1277,25 +1431,25 @@ export default function DashboardPage() {
                     className="hidden"
                     onChange={(e) => {
                       const selected = Array.from(e.target.files ?? []);
-                      setRsvpFiles((prev) => [...prev, ...selected]);
+                      setReimbursementFiles((prev) => [...prev, ...selected]);
                       e.target.value = "";
                     }}
                   />
                   <p className="text-sm text-muted-foreground">
                     {isDragging ? "Drop files here" : "Click or drag screenshots here"}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground/60">Images only (optional)</p>
+                  <p className="mt-1 text-xs text-muted-foreground/60">Images only</p>
                 </div>
 
                 {/* File list */}
-                {rsvpFiles.length > 0 && (
+                {reimbursementFiles.length > 0 && (
                   <ul className="mt-3 space-y-1">
-                    {rsvpFiles.map((f, i) => (
+                    {reimbursementFiles.map((f, i) => (
                       <li key={i} className="flex items-center justify-between rounded-lg border border-border bg-background/25 px-3 py-2 text-xs">
                         <span className="truncate text-foreground">{f.name}</span>
                         <button
                           className="ml-3 shrink-0 text-muted-foreground hover:text-foreground"
-                          onClick={() => setRsvpFiles((prev) => prev.filter((_, j) => j !== i))}
+                          onClick={() => setReimbursementFiles((prev) => prev.filter((_, j) => j !== i))}
                         >
                           ✕
                         </button>
@@ -1304,8 +1458,8 @@ export default function DashboardPage() {
                   </ul>
                 )}
 
-                {rsvpError && (
-                  <p className="mt-3 text-sm text-destructive">{rsvpError}</p>
+                {reimbursementError && (
+                  <p className="mt-3 text-sm text-destructive">{reimbursementError}</p>
                 )}
 
                 <div className="mt-6 flex gap-3">
@@ -1313,17 +1467,17 @@ export default function DashboardPage() {
                     size="lg"
                     variant="outline"
                     className="flex-1"
-                    onClick={() => { setRsvpOpen(false); setRsvpFiles([]); setRsvpError(null); }}
+                    onClick={() => { setReimbursementOpen(false); setReimbursementFiles([]); setReimbursementError(null); }}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="lg"
                     className="flex-1"
-                    disabled={rsvpLoading}
-                    onClick={submitRsvp}
+                    disabled={reimbursementLoading || reimbursementFiles.length === 0}
+                    onClick={submitReimbursement}
                   >
-                    {rsvpLoading ? "Submitting…" : "RSVP to the Conference"}
+                    {reimbursementLoading ? "Submitting…" : "Submit"}
                   </Button>
                 </div>
               </>

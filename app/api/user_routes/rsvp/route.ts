@@ -69,3 +69,32 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
 }
+
+export async function DELETE(request: Request) {
+  const auth = await requireAuthUser(request);
+  if (!auth.ok) return auth.response;
+
+  const { data: userRow, error: userError } = await supabaseAdmin
+    .from("Users")
+    .select("status")
+    .eq("user_id", auth.user.id)
+    .single();
+
+  if (userError || !userRow) {
+    return jsonError(404, "User not found.");
+  }
+  if (userRow.status !== "rsvp_confirmed") {
+    return jsonError(403, "Only RSVP'd users can un-RSVP.");
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("Users")
+    .update({ status: "app_rejected" })
+    .eq("user_id", auth.user.id);
+
+  if (updateError) {
+    return jsonError(500, `Failed to un-RSVP: ${updateError.message}`);
+  }
+
+  return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+}
