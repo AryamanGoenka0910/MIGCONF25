@@ -658,6 +658,25 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+                <div className="rounded-2xl border border-border bg-background/25 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
+                      <CalendarDays className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">Algo Challenge</div>
+                      <div className="mt-1 text-sm text-muted-foreground">Now through March 20th, 2026</div>
+                      <a
+                        href="https://mig-algo-challenge.vercel.app/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4"
+                      >
+                        Open Challenge <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
             </GlassCard>
 
@@ -1027,15 +1046,27 @@ export default function DashboardPage() {
               </div>
             )}
           </GlassCard>
-          {INVITES_CLOSED && (
-            <GlassCard 
+          {userInfo?.status === "rsvp_confirmed" && (
+            <GlassCard
               title="GAMES"
             >
               <div className="mt-5 space-y-4">
                 <div className="rounded-2xl border border-border bg-background/25 p-5">
                   <div className="flex items-start gap-3">
+                    <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
+                      <Trophy className="h-5 w-5 text-primary" />
+                    </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold">Comming Soon</div>
+                      <div className="text-sm font-semibold">Algo Challenge</div>
+                      <div className="mt-1 text-sm text-muted-foreground">Now through March 20th, 2026</div>
+                      <a
+                        href="https://mig-algo-challenge.vercel.app/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4"
+                      >
+                        Open Challenge <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -1065,6 +1096,28 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {userInfo?.status === "rsvp_confirmed" && (
+                <div className="rounded-2xl border border-border bg-background/25 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
+                    <CalendarDays className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">Algo Challenge</div>
+                    <div className="mt-1 text-sm text-muted-foreground">Now through March 20th, 2026</div>
+                    <a
+                      href="https://mig-algo-challenge.vercel.app/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4"
+                    >
+                      Open Challenge <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="rounded-2xl border border-border bg-background/25 p-5">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
@@ -1125,6 +1178,18 @@ export default function DashboardPage() {
                 <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
               </a>
 
+              {userInfo?.status === "rsvp_confirmed" && (
+                <a
+                  href="https://discord.gg/depR4xR2"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 transition hover:bg-background/35"
+                >
+                  <ExternalLink className="h-5 w-5 text-primary" />
+                  <div className="text-sm font-semibold">Discord</div>
+                  <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
+                </a>
+              )}
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 text-sm text-muted-foreground">
                 <Clock className="h-5 w-5 text-primary" />
                 We aim to respond within 48 hours.
