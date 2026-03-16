@@ -215,23 +215,25 @@ function UserRow({
           <div
             ref={dropdownRef}
             style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
-            className="min-w-[180px] rounded-lg border border-white/15 bg-[#111] shadow-xl py-1"
+            className="min-w-[180px] rounded-lg border border-white/15 bg-[#111] shadow-xl flex flex-col"
           >
-            {otherTeams.map((t) => (
-              <button
-                key={t.team_id}
-                onClick={() => handleMove(t.team_id)}
-                disabled={actionLoading}
-                className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                Team #{t.team_id}
-                <span className="ml-1 text-white/30">({t.members.length} member{t.members.length !== 1 ? "s" : ""})</span>
-              </button>
-            ))}
+            <div className="overflow-y-auto max-h-48 py-1">
+              {otherTeams.map((t) => (
+                <button
+                  key={t.team_id}
+                  onClick={() => handleMove(t.team_id)}
+                  disabled={actionLoading}
+                  className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  Team #{t.team_id}
+                  <span className="ml-1 text-white/30">({t.members.length} member{t.members.length !== 1 ? "s" : ""})</span>
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => handleMove(null)}
               disabled={actionLoading}
-              className="w-full text-left px-3 py-2 text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors border-t border-white/10 mt-1"
+              className="w-full text-left px-3 py-2 text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors border-t border-white/10"
             >
               New Solo Team
             </button>

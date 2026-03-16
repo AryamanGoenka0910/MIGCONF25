@@ -61,7 +61,36 @@ export async function POST(request: Request) {
     newTeamId = targetTeamId;
   }
 
-  // Remove user from old team (if they had one)
+  // Add user to new existing team (skip if we just created a solo team — already done during insert)
+  if (targetTeamId !== null) {
+    const { data: newTeamRow, error: newTeamFetchError } = await supabaseAdmin
+      .from("Teams")
+      .select("teammember_ids")
+      .eq("team_id", newTeamId)
+      .maybeSingle();
+
+    if (newTeamFetchError) return jsonError(500, `Failed to load target team: ${newTeamFetchError.message}`);
+    if (!newTeamRow) return jsonError(404, "Target team not found.");
+
+    const existingMembers = ((newTeamRow as { teammember_ids?: unknown }).teammember_ids as string[] ?? []).filter(Boolean);
+    if (!existingMembers.includes(userId)) {
+      const { error: updateNewError } = await supabaseAdmin
+        .from("Teams")
+        .update({ teammember_ids: [...existingMembers, userId] })
+        .eq("team_id", newTeamId);
+      if (updateNewError) return jsonError(500, `Failed to update target team: ${updateNewError.message}`);
+    }
+  }
+
+  // Update user's team_id first so the FK reference to the old team is released
+  const { error: updateUserError } = await supabaseAdmin
+    .from("Users")
+    .update({ team_id: newTeamId })
+    .eq("user_id", userId);
+
+  if (updateUserError) return jsonError(500, `Failed to update user team: ${updateUserError.message}`);
+
+  // Now clean up the old team (FK is already cleared above)
   if (currentTeamId !== null && currentTeamId !== newTeamId) {
     const { data: oldTeamRow, error: oldTeamError } = await supabaseAdmin
       .from("Teams")
@@ -90,35 +119,6 @@ export async function POST(request: Request) {
       }
     }
   }
-
-  // Add user to new existing team (skip if we just created a solo team — already done during insert)
-  if (targetTeamId !== null) {
-    const { data: newTeamRow, error: newTeamFetchError } = await supabaseAdmin
-      .from("Teams")
-      .select("teammember_ids")
-      .eq("team_id", newTeamId)
-      .maybeSingle();
-
-    if (newTeamFetchError) return jsonError(500, `Failed to load target team: ${newTeamFetchError.message}`);
-    if (!newTeamRow) return jsonError(404, "Target team not found.");
-
-    const existingMembers = ((newTeamRow as { teammember_ids?: unknown }).teammember_ids as string[] ?? []).filter(Boolean);
-    if (!existingMembers.includes(userId)) {
-      const { error: updateNewError } = await supabaseAdmin
-        .from("Teams")
-        .update({ teammember_ids: [...existingMembers, userId] })
-        .eq("team_id", newTeamId);
-      if (updateNewError) return jsonError(500, `Failed to update target team: ${updateNewError.message}`);
-    }
-  }
-
-  // Update user's team_id
-  const { error: updateUserError } = await supabaseAdmin
-    .from("Users")
-    .update({ team_id: newTeamId })
-    .eq("user_id", userId);
-
-  if (updateUserError) return jsonError(500, `Failed to update user team: ${updateUserError.message}`);
 
   return NextResponse.json(
     { ok: true, new_team_id: newTeamId },
