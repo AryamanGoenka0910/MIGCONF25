@@ -84,4 +84,25 @@ type AdminApplication = {
   teammates: AdminTeammate[];
 };
 
-export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication, AdminTeammate, TeamMemberStatus, TeamMember, TeamResponse };
+type AdminUserWithApp = {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  status: "app_submitted" | "app_accepted" | "app_rejected" | "rsvp_confirmed" | null;
+  team_id: number | null;
+  application: {
+    school: string;
+    major: string;
+    grad_year: string;
+    travel_reimbursement: boolean;
+    trading_experience: boolean;
+    submitted_at: string | null;
+  } | null;
+};
+
+type AdminTeamWithMembers = {
+  team_id: number;
+  members: AdminUserWithApp[];
+};
+
+export type { DirectoryUser, AvailableUser, Application, User, InviteUserRow, Invite, AdminApplication, AdminTeammate, TeamMemberStatus, TeamMember, TeamResponse, AdminUserWithApp, AdminTeamWithMembers };

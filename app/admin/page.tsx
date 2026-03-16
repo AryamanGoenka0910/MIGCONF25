@@ -8,31 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import BackgroundGlow from "@/components/background-glow";
 import { ChevronDown } from "lucide-react";
 import type { AdminApplication } from "@/lib/types";
+import { cn, statusBadgeVariant, statusLabel } from "@/lib/admin-utils";
 
 type AccessState = "loading" | "denied" | "granted";
 type StatusFilter = "all" | "app_submitted" | "app_accepted" | "app_rejected" | "rsvp_confirmed" | "none";
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
-const statusBadgeVariant = (
-  status: AdminApplication["status"]
-): "outline" | "default" | "destructive" | "secondary" => {
-  if (status === "app_accepted") return "default";
-  if (status === "app_rejected") return "destructive";
-  if (status === "app_submitted") return "outline";
-  if (status === "rsvp_confirmed") return "default";
-  return "secondary";
-};
-
-const statusLabel = (status: AdminApplication["status"]): string => {
-  if (status === "app_submitted") return "Submitted";
-  if (status === "app_accepted") return "Accepted";
-  if (status === "app_rejected") return "Rejected";
-  if (status === "rsvp_confirmed") return "RSVP Confirmed";
-  return "—";
-};
 
 const FILTER_LABELS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },

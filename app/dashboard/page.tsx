@@ -48,7 +48,10 @@ const statusLabels: Record<string, string> = {
   "rsvp_confirmed": "RSVP Confirmed",
 };
 
+ const INVITES_CLOSED = true;
+
 export default function DashboardPage() {
+
   const router = useRouter();
   const { user, loading, session } = useSession();
 
@@ -746,22 +749,22 @@ export default function DashboardPage() {
               <Button
                 size="lg"
                 variant="default"
-                disabled={true}
+                // disabled={true}
                 onClick={() => {
                   if (profileLoading || isApplicationSubmitted) return;
                   setApplicationButtonLoading(true);
                   router.push("/application");
                 }}
               >
-                {/* {profileLoading
+                {profileLoading
                   ? "Checking…"
                   : isApplicationSubmitted
                     ? "Application Submitted"
                     : applicationButtonLoading
                       ? "Opening…"
                       : "Start Application"}
-                {profileLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />} */}
-                Applications Are Closed
+                {profileLoading || isApplicationSubmitted ? null : <ArrowRight className="ml-2 h-4 w-4" />}
+                {/* Applications Are Closed */}
               </Button>
 
               <Button
@@ -843,18 +846,22 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 animate-fade-in-up">
-          <div className="flex flex-row items-center justify-between gap-2">
-            <p>PLEASE READ: click the info button for team formation guidelines.</p>
-            <Button variant="outline" onClick={() => setTeammateInfoOpen?.(true)}>
-              <InfoIcon className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        {!INVITES_CLOSED && (
+          <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-100 animate-fade-in-up">
+            <div className="flex flex-row items-center justify-between gap-2">
+              <p>PLEASE READ: click the info button for team formation guidelines.</p>
+              <Button variant="outline" onClick={() => setTeammateInfoOpen?.(true)}>
+                <InfoIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div> 
+        )}
+        
           
         {/* Invites + Team */}
         <section className="mt-6 grid gap-6 md:grid-cols-2">
           {/* Invites */}
+          {!INVITES_CLOSED && (
           <GlassCard 
             title="Team Invites"
             applicationStatus={isEligbleForTeam}
@@ -959,6 +966,7 @@ export default function DashboardPage() {
             </div>
             )}
           </GlassCard>
+          )}
 
           {/* Team */}
           <GlassCard
@@ -1019,6 +1027,21 @@ export default function DashboardPage() {
               </div>
             )}
           </GlassCard>
+          {INVITES_CLOSED && (
+            <GlassCard 
+              title="GAMES"
+            >
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-border bg-background/25 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">Comming Soon</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+          )}
         </section>
 
         {/* Important Dates + Contact & Support */}
@@ -1520,7 +1543,7 @@ function GlassCard({
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{title}</div>
           </div>
-          {(teamAdd && applicationStatus) && (
+          {(teamAdd && applicationStatus && !INVITES_CLOSED) && (
             <Button variant="outline" onClick={() => setTeamAddSection?.(true)}>
               <PlusIcon className="h-4 w-4" />
             </Button>

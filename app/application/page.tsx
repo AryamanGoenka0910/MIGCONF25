@@ -124,7 +124,7 @@ const creatableSelectStyles: StylesConfig<SelectOption, false> = {
 };
 
 
-const APPLICATIONS_CLOSED = true;
+const APPLICATIONS_CLOSED = false;
 
 export default function ApplicationPage() {
   const router = useRouter();
