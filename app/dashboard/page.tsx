@@ -840,7 +840,7 @@ export default function DashboardPage() {
             <div className="flex flex-row items-center justify-between gap-2">
               <p>You&apos;re in! Join our Discord community for updates and announcements.</p>
               <a
-                href="https://discord.gg/vdv62ZJ9"
+                href="https://discord.gg/BxjDucDe"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 rounded-lg border border-indigo-400/30 bg-indigo-400/10 px-3 py-1.5 text-xs font-medium text-indigo-100 hover:bg-indigo-400/20 transition-colors"
@@ -1180,7 +1180,7 @@ export default function DashboardPage() {
 
               {userInfo?.status === "rsvp_confirmed" && (
                 <a
-                  href="https://discord.gg/depR4xR2"
+                  href="https://discord.gg/BxjDucDe"
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-4 transition hover:bg-background/35"
