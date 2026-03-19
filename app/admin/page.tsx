@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BackgroundGlow from "@/components/background-glow";
 import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 import type { AdminApplication } from "@/lib/types";
 import { cn, statusBadgeVariant, statusLabel } from "@/lib/admin-utils";
 
@@ -191,8 +192,14 @@ export default function AdminPage() {
 
       <div className="relative z-10 max-w-[1600px] mx-auto mt-20">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-white">Admin — Applications</h1>
+          <Link
+            href="/admin/team-management"
+            className="text-sm text-white/50 hover:text-white/90 border border-white/15 hover:border-white/30 rounded-lg px-3 py-1.5 transition-colors"
+          >
+            Team Management →
+          </Link>
         </div>
 
         {/* Filters */}

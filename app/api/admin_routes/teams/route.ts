@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   const [{ data: teams, error: teamsError }, { data: users, error: usersError }, { data: apps, error: appsError }] =
     await Promise.all([
-      supabaseAdmin.from("Teams").select("team_id, teammember_ids").order("team_id", { ascending: true }),
+      supabaseAdmin.from("Teams").select("team_id, teammember_ids, team_name, game_1_score, game_2_score, game_3_score, game_4_score, algo_score").order("team_id", { ascending: true }),
       supabaseAdmin.from("Users").select("user_id, team_id, user_name, user_email, status"),
       supabaseAdmin.from("Applications").select("user_id, school, major, grad_year, travel_reimbursement, trading_experience, submitted_at"),
     ]);
@@ -62,7 +62,16 @@ export async function GET(request: Request) {
       };
     });
 
-    return { team_id: Number(t.team_id), members };
+    return {
+      team_id: Number(t.team_id),
+      team_name: (t as Record<string, unknown>).team_name as string | null ?? null,
+      game_1_score: (t as Record<string, unknown>).game_1_score as number | null ?? null,
+      game_2_score: (t as Record<string, unknown>).game_2_score as number | null ?? null,
+      game_3_score: (t as Record<string, unknown>).game_3_score as number | null ?? null,
+      game_4_score: (t as Record<string, unknown>).game_4_score as number | null ?? null,
+      algo_score: (t as Record<string, unknown>).algo_score as number | null ?? null,
+      members,
+    };
   });
 
   return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });

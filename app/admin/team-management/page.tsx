@@ -31,6 +31,12 @@ type Member = {
 
 type Team = {
   team_id: number;
+  team_name: string | null;
+  game_1_score: number | null;
+  game_2_score: number | null;
+  game_3_score: number | null;
+  game_4_score: number | null;
+  algo_score: number | null;
   members: Member[];
 };
 
@@ -51,6 +57,7 @@ function UserRow({
   const [moving, setMoving] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localStatus, setLocalStatus] = useState(user.status);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -131,7 +138,33 @@ function UserRow({
     }
   };
 
+  const handleCheckIn = async () => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin_routes/checkin-user", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user_id: user.user_id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError((body as { error?: string }).error ?? "Failed to check in user.");
+        return;
+      }
+      setLocalStatus("checked_in");
+    } catch {
+      setError("Failed to check in user.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const app = user.application;
+  const isCheckedIn = localStatus === "checked_in";
 
   return (
     <Fragment>
@@ -149,12 +182,26 @@ function UserRow({
         </td>
         <td className="px-4 py-3 text-white/60">{user.user_email}</td>
         <td className="px-4 py-3">
-          <Badge variant={statusBadgeVariant(user.status as Parameters<typeof statusBadgeVariant>[0])}>
-            {statusLabel(user.status as Parameters<typeof statusLabel>[0])}
+          <Badge variant={statusBadgeVariant(localStatus as Parameters<typeof statusBadgeVariant>[0])}>
+            {statusLabel(localStatus as Parameters<typeof statusLabel>[0])}
           </Badge>
         </td>
         <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCheckIn}
+              disabled={actionLoading || isCheckedIn}
+              className={cn(
+                "text-xs whitespace-nowrap",
+                isCheckedIn
+                  ? "border-emerald-500/30 text-emerald-400/50 cursor-default"
+                  : "border-emerald-500/40 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+              )}
+            >
+              {isCheckedIn ? "Checked In" : "Check In"}
+            </Button>
             <div ref={btnRef} className="inline-block">
               <Button
                 size="sm"
@@ -245,6 +292,107 @@ function UserRow({
   );
 }
 
+const SCORE_FIELDS: { key: keyof Pick<Team, "game_1_score" | "game_2_score" | "game_3_score" | "game_4_score" | "algo_score">; label: string }[] = [
+  { key: "game_1_score", label: "Game 1" },
+  { key: "game_2_score", label: "Game 2" },
+  { key: "game_3_score", label: "Game 3" },
+  { key: "game_4_score", label: "Game 4" },
+  { key: "algo_score", label: "Algo" },
+];
+
+function TeamScoreFields({ team, session }: { team: Team; session: { access_token: string } }) {
+  const [values, setValues] = useState({
+    team_name: team.team_name ?? "",
+    game_1_score: team.game_1_score?.toString() ?? "",
+    game_2_score: team.game_2_score?.toString() ?? "",
+    game_3_score: team.game_3_score?.toString() ?? "",
+    game_4_score: team.game_4_score?.toString() ?? "",
+    algo_score: team.algo_score?.toString() ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const res = await fetch("/api/admin_routes/update-team", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          team_id: team.team_id,
+          team_name: values.team_name,
+          game_1_score: values.game_1_score,
+          game_2_score: values.game_2_score,
+          game_3_score: values.game_3_score,
+          game_4_score: values.game_4_score,
+          algo_score: values.algo_score,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError((body as { error?: string }).error ?? "Failed to save.");
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError("Failed to save.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls = "w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder-white/20 outline-none focus:border-white/30";
+
+  return (
+    <div className="px-4 py-3 border-t border-white/10 bg-white/2">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex flex-col gap-1 min-w-35">
+          <label className="text-[10px] text-white/30 uppercase tracking-wide">Team Name</label>
+          <input
+            type="text"
+            value={values.team_name}
+            onChange={(e) => setValues((v) => ({ ...v, team_name: e.target.value }))}
+            placeholder="—"
+            className={inputCls}
+          />
+        </div>
+        {SCORE_FIELDS.map(({ key, label }) => (
+          <div key={key} className="flex flex-col gap-1 w-20">
+            <label className="text-[10px] text-white/30 uppercase tracking-wide">{label}</label>
+            <input
+              type="number"
+              value={values[key]}
+              onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+              placeholder="—"
+              className={inputCls}
+            />
+          </div>
+        ))}
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] text-white/30 uppercase tracking-wide invisible">Save</label>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSave}
+            disabled={saving}
+            className="text-xs border-white/20 text-white/70 hover:text-white hover:bg-white/10 whitespace-nowrap"
+          >
+            {saving ? "Saving…" : saved ? "Saved" : "Save"}
+          </Button>
+        </div>
+      </div>
+      {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+    </div>
+  );
+}
+
 export default function TeamManagementPage() {
   const router = useRouter();
   const { user, loading, session } = useSession();
@@ -320,7 +468,7 @@ export default function TeamManagementPage() {
   const q = search.trim().toLowerCase();
 
   const rsvpTeams = teams.filter((t) =>
-    t.members.some((m) => m.status === "rsvp_confirmed")
+    t.members.some((m) => m.status === "rsvp_confirmed" || m.status === "checked_in")
   );
 
   const visibleTeams = q
@@ -402,10 +550,13 @@ export default function TeamManagementPage() {
             {visibleTeams.map((team) => (
               <div key={team.team_id} className="mb-5 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm">
                 <div className="px-4 py-2.5 border-b border-white/10 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">Team #{team.team_id}</span>
+                  {team.team_name && (
+                    <span className="text-sm font-semibold text-white">Team Name: {team.team_name}</span>
+                  )}
                   <span className="text-xs text-white/40">
                     {team.members.length} member{team.members.length !== 1 ? "s" : ""}
                   </span>
+                  <span className="text-sm font-semibold text-white">Team #{team.team_id}</span>
                 </div>
                 <table className="w-full text-sm text-white/80">
                   <thead>
@@ -429,6 +580,7 @@ export default function TeamManagementPage() {
                     ))}
                   </tbody>
                 </table>
+                <TeamScoreFields team={team} session={session!} />
               </div>
             ))}
 

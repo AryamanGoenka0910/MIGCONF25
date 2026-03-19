@@ -38,6 +38,7 @@ const statusStyles: Record<string, string> = {
   "app_accepted": "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
   "app_rejected": "border-destructive/25 bg-destructive/10 text-destructive-foreground",
   "rsvp_confirmed": "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+  "checked_in": "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
 };
 
 const statusLabels: Record<string, string> = {
@@ -46,6 +47,7 @@ const statusLabels: Record<string, string> = {
   "app_accepted": "Accepted",
   "app_rejected": "Rejected",
   "rsvp_confirmed": "RSVP Confirmed",
+  "checked_in": "Checked In",
 };
 
  const INVITES_CLOSED = true;
@@ -543,6 +545,7 @@ export default function DashboardPage() {
   const teamMembers = teamInfo?.team?.members ?? [];
   const userRole = userInfo?.role ?? "Attendee";
   const isApplicationSubmitted = userInfo?.status === "app_submitted";
+  const isRsvpOrCheckedIn = userInfo?.status === "rsvp_confirmed" || userInfo?.status === "checked_in";
   const isEligbleForTeam = ["app_submitted", "app_accepted", "rsvp_confirmed"].includes(userInfo?.status ?? "not_started");
 
   const quickStats = [
@@ -835,7 +838,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {(userInfo?.status === "app_accepted" || userInfo?.status === "rsvp_confirmed") && (
+        {(userInfo?.status === "app_accepted" || isRsvpOrCheckedIn) && (
           <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-indigo-400/10 px-4 py-3 text-sm font-medium text-indigo-100 animate-fade-in-up">
             <div className="flex flex-row items-center justify-between gap-2">
               <p>You&apos;re in! Join our Discord community for updates and announcements.</p>
@@ -851,7 +854,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {userInfo?.status === "rsvp_confirmed" && (
+        {isRsvpOrCheckedIn && (
           <div className="mt-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 animate-fade-in-up">
             <div className="flex flex-row items-center justify-between gap-2">
               <p>Need to submit travel reimbursements? Upload your receipts here.</p>
@@ -1046,7 +1049,7 @@ export default function DashboardPage() {
               </div>
             )}
           </GlassCard>
-          {userInfo?.status === "rsvp_confirmed" && (
+          {isRsvpOrCheckedIn && (
             <GlassCard
               title="GAMES"
             >
@@ -1070,6 +1073,21 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+                {userInfo?.status === "checked_in" && (
+                  <a
+                    href="/leaderboard"
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-background/25 p-5 transition hover:bg-background/35"
+                  >
+                    <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
+                      <Trophy className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">Leaderboard</div>
+                      <div className="mt-1 text-sm text-muted-foreground">Live team rankings</div>
+                    </div>
+                    <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                  </a>
+                )}
               </div>
             </GlassCard>
           )}
@@ -1096,7 +1114,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {userInfo?.status === "rsvp_confirmed" && (
+              {isRsvpOrCheckedIn && (
                 <div className="rounded-2xl border border-border bg-background/25 p-5">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card/40">
@@ -1178,7 +1196,7 @@ export default function DashboardPage() {
                 <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
               </a>
 
-              {userInfo?.status === "rsvp_confirmed" && (
+              {isRsvpOrCheckedIn && (
                 <a
                   href="https://discord.gg/BxjDucDe"
                   target="_blank"
