@@ -9,6 +9,7 @@ function toMemberStatus(status: string | null): TeamMemberStatus {
   if (status === "app_accepted") return "accepted";
   if (status === "app_rejected") return "rejected";
   if (status === "rsvp_confirmed") return "rsvped";
+  if (status === "checked_in") return "checked_in";
   return "pending";
 }
 
@@ -49,10 +50,21 @@ export async function GET(request: Request) {
     status: toMemberStatus(m.status ?? null),
   }));
 
+   const { data: teamData, error: teamError } = await supabaseAdmin
+    .from("Teams")
+    .select("team_id, team_name")
+    .eq("team_id", teamId)
+    .single();
+
+  if (teamError) {
+    return jsonError(500, `Failed to load team members: ${teamError.message}`);
+  } 
+
   return NextResponse.json(
     {
       team: {
         team_id: teamId,
+        team_name: teamData?.team_name ?? null,
         members: membersWithStatus,
       },
     },

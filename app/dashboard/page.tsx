@@ -543,6 +543,7 @@ export default function DashboardPage() {
   const displayNameFromAuth = getUserDisplayName(user);
   const displayName = userInfo?.user_name ?? displayNameFromAuth;
   const teamMembers = teamInfo?.team?.members ?? [];
+  const teamName = teamInfo?.team?.team_name ? `Team: ${teamInfo.team.team_name}` : "Team";
   const userRole = userInfo?.role ?? "Attendee";
   const isApplicationSubmitted = userInfo?.status === "app_submitted";
   const isRsvpOrCheckedIn = userInfo?.status === "rsvp_confirmed" || userInfo?.status === "checked_in";
@@ -992,7 +993,7 @@ export default function DashboardPage() {
 
           {/* Team */}
           <GlassCard
-            title="Team"
+            title={teamName}
             teamAdd={true}
             applicationStatus={isEligbleForTeam}
             setTeamAddSection={setTeamAddSection}
@@ -1026,13 +1027,15 @@ export default function DashboardPage() {
                           m.status === "accepted" && "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
                           m.status === "rsvped" && "border-blue-400/20 bg-blue-400/10 text-blue-100",
                           m.status === "rejected" && "border-red-400/20 bg-red-400/10 text-red-200",
-                          m.status === "pending" && "border-amber-400/20 bg-amber-400/10 text-amber-100"
+                          m.status === "pending" && "border-amber-400/20 bg-amber-400/10 text-amber-100",
+                          m.status === "checked_in" && "border-emerald-400/20 bg-emerald-400/10 text-emerald-100"
                         )}
                       >
                         {m.status === "accepted" && "Accepted"}
                         {m.status === "rsvped" && "RSVP'd"}
                         {m.status === "rejected" && "Rejected"}
                         {m.status === "pending" && "Pending"}
+                        {m.status === "checked_in" && "Checked In"}
                       </span>
                     </div>
                   </TeamRow>

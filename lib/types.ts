@@ -41,7 +41,7 @@ type Invite = {
 };
 
 
-type TeamMemberStatus = "accepted" | "rejected" | "rsvped" | "pending";
+type TeamMemberStatus = "accepted" | "rejected" | "rsvped" | "pending" | "checked_in";
 
 type TeamMember = {
   user_id: string;
@@ -55,6 +55,7 @@ type TeamMember = {
 type TeamResponse = {
   team: {
     team_id: number;
+    team_name: string | null;
     members: TeamMember[];
   } | null;
 };
